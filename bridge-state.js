@@ -1,0 +1,293 @@
+(function () {
+  'use strict';
+
+  const $ = (selector, root = document) => root.querySelector(selector);
+
+  const B = {
+    extensionId: $('#bridgeExtensionId'),
+    apifyApiTokenInput: $('#apifyApiTokenInput'),
+    apifyApiTokenToggle: $('#apifyApiTokenToggle'),
+    fbGroupIdInput: $('#fbGroupIdInput'),
+    groupLimitInput: $('#groupLimitInput'),
+    scanSourceModeSelect: $('#scanSourceModeSelect'),
+    loopPauseSecondsInput: $('#loopPauseSecondsInput'),
+    linkPauseSecondsInput: $('#linkPauseSecondsInput'),
+    fbPostLinkInput: $('#fbPostLinkInput'),
+    scanGroupLinksBtn: $('#scanGroupLinksBtn'),
+    apifyScanBtn: $('#apifyScanBtn'),
+    stopClosedLoopBtn: $('#stopClosedLoopBtn'),
+    autoWorkflowBtn: $('#autoWorkflowBtn'),
+    commentCurrentTabBtn: $('#commentCurrentTabBtn'),
+    bridgeStatus: $('#bridgeStatus'),
+    articleInput: $('#articleInput'),
+    output: $('#output'),
+    fbDelayMs: $('#fbDelayMs'),
+    fbMaxChars: $('#fbMaxChars'),
+    autoCommentAfterGenerate: $('#autoCommentAfterGenerate'),
+    closeAfterComment: $('#closeAfterComment'),
+    clearCommentedLinksBtn: $('#clearCommentedLinksBtn'),
+    commentedLinksBox: $('#commentedLinksBox'),
+    commentedCountStat: $('#commentedCountStat')
+  };
+
+  const STORE = {
+    extensionId: 'truong_fb_bridge_extension_id_v1',
+    apifyToken: 'truong_fb_bridge_apify_token_v1',
+    groupIds: 'truong_fb_bridge_group_ids_v1',
+    groupLimit: 'truong_fb_bridge_group_limit_v1',
+    scanSourceMode: 'truong_fb_bridge_scan_source_mode_v1',
+    loopPauseSeconds: 'truong_fb_bridge_loop_pause_seconds_v1',
+    oldLoopPauseMinutes: 'truong_fb_bridge_loop_pause_minutes_v1',
+    linkPauseSeconds: 'truong_fb_bridge_link_pause_seconds_v1',
+    postLinks: 'truong_fb_bridge_post_links_v1',
+    commented: 'truong_fb_bridge_commented_links_v1'
+  };
+
+  const bridgeState = {
+    closedLoopRunning: false,
+    activeReadTabId: null,
+    activeReadLink: '',
+    bridgeBusy: false
+  };
+
+  function save(key, value) {
+    localStorage.setItem(key, JSON.stringify(value));
+  }
+
+  function load(key, fallback) {
+    try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+    catch { return fallback; }
+  }
+
+  function text(value) {
+    return String(value || '').trim();
+  }
+
+  function clampNumber(value, fallback, min, max) {
+    if (String(value ?? '').trim() === '') return fallback;
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.max(min, Math.min(max, n));
+  }
+
+
+  function getScanSourceMode() {
+    const allowed = new Set(['group_latest', 'group_top']);
+    const raw = String(B.scanSourceModeSelect?.value || load(STORE.scanSourceMode, 'group_latest') || 'group_latest');
+    const value = allowed.has(raw) ? raw : 'group_latest';
+    if (B.scanSourceModeSelect) B.scanSourceModeSelect.value = value;
+    save(STORE.scanSourceMode, value);
+    return value;
+  }
+
+  function getGroupLimit() {
+    const value = Math.round(clampNumber(B.groupLimitInput?.value, 5, 1, 50));
+    if (B.groupLimitInput) B.groupLimitInput.value = String(value);
+    save(STORE.groupLimit, B.groupLimitInput?.value || String(value));
+    return value;
+  }
+
+  function getLoopPauseSeconds() {
+    let fallback = 240;
+    const savedSeconds = load(STORE.loopPauseSeconds, null);
+    if (savedSeconds === null) {
+      const oldMinutes = load(STORE.oldLoopPauseMinutes, null);
+      if (oldMinutes !== null && oldMinutes !== '') fallback = Math.round(clampNumber(oldMinutes, 5, 0, 1440)) * 60;
+    }
+    const value = Math.round(clampNumber(B.loopPauseSecondsInput?.value, fallback, 0, 86400));
+    if (B.loopPauseSecondsInput) B.loopPauseSecondsInput.value = String(value);
+    save(STORE.loopPauseSeconds, B.loopPauseSecondsInput?.value || String(value));
+    return value;
+  }
+
+  function getLinkPauseSeconds() {
+    const value = Math.round(clampNumber(B.linkPauseSecondsInput?.value, 60, 0, 86400));
+    if (B.linkPauseSecondsInput) B.linkPauseSecondsInput.value = String(value);
+    save(STORE.linkPauseSeconds, B.linkPauseSecondsInput?.value || String(value));
+    return value;
+  }
+
+  function setBridgeStatus(message, type = '') {
+    if (!B.bridgeStatus) return;
+    B.bridgeStatus.textContent = message;
+    B.bridgeStatus.className = 'automation-status' + (type ? ' ' + type : '');
+  }
+
+  function addInputSave(el, key) {
+    if (!el) return;
+    el.value = load(key, '') || '';
+    const persist = () => save(key, el.value);
+    el.addEventListener('input', persist);
+    el.addEventListener('change', persist);
+  }
+
+  function parseLines(raw) {
+    return String(raw || '')
+      .split(/[\n,]+/)
+      .map(item => item.trim())
+      .filter(Boolean);
+  }
+
+  function normalizeUrl(raw) {
+    try {
+      const url = new URL(String(raw).trim());
+      url.hash = '';
+      url.hostname = url.hostname.toLowerCase().replace(/^(m|mbasic|web)\.facebook\.com$/i, 'www.facebook.com');
+      url.pathname = url.pathname.replace(/\/+$/, '');
+      const drop = ['fbclid', 'mibextid', '__cft__', '__tn__', 'ref', 'refid', 'paipv'];
+      drop.forEach(key => url.searchParams.delete(key));
+      return url.toString();
+    } catch {
+      return String(raw || '').trim();
+    }
+  }
+
+  function uniqueLinks(lines) {
+    const out = [];
+    const seen = new Set();
+    for (const line of lines) {
+      const clean = normalizeUrl(line);
+      if (!clean || seen.has(clean)) continue;
+      seen.add(clean);
+      out.push(clean);
+    }
+    return out;
+  }
+
+  function getCommentedLinks() {
+    return uniqueLinks(load(STORE.commented, []));
+  }
+
+  function renderCommentedLinks() {
+    const list = getCommentedLinks();
+    if (B.commentedLinksBox) B.commentedLinksBox.value = list.join('\n');
+    if (B.commentedCountStat) B.commentedCountStat.textContent = String(list.length);
+  }
+
+  function filterNewLinks(links) {
+    const commented = new Set(getCommentedLinks().map(normalizeUrl));
+    return uniqueLinks(links).filter(link => !commented.has(normalizeUrl(link)));
+  }
+
+  function syncPostLinksInput() {
+    if (!B.fbPostLinkInput) return;
+    const value = filterNewLinks(parseLines(B.fbPostLinkInput.value)).join('\n');
+    if (B.fbPostLinkInput.value !== value) B.fbPostLinkInput.value = value;
+    save(STORE.postLinks, value);
+  }
+
+  function setPostLinks(links) {
+    if (!B.fbPostLinkInput) return;
+    B.fbPostLinkInput.value = filterNewLinks(links).join('\n');
+    save(STORE.postLinks, B.fbPostLinkInput.value);
+    B.fbPostLinkInput.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function getPostLinks() {
+    return filterNewLinks(parseLines(B.fbPostLinkInput?.value));
+  }
+
+  function saveCommentedLink(link) {
+    const list = getCommentedLinks();
+    const clean = normalizeUrl(link);
+    if (clean && !list.includes(clean)) list.unshift(clean);
+    save(STORE.commented, list);
+    renderCommentedLinks();
+    syncPostLinksInput();
+  }
+
+  function wirePostLinksInput() {
+    if (!B.fbPostLinkInput) return;
+    B.fbPostLinkInput.value = load(STORE.postLinks, '') || '';
+    syncPostLinksInput();
+    B.fbPostLinkInput.addEventListener('input', syncPostLinksInput);
+  }
+
+  function getExtensionId() {
+    const id = text(B.extensionId?.value);
+    if (id) save(STORE.extensionId, id);
+    return id;
+  }
+
+  function getApifyToken() {
+    const token = text(B.apifyApiTokenInput?.value);
+    if (token) save(STORE.apifyToken, token);
+    return token;
+  }
+
+  function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function setClosedLoopRunning(value) {
+    bridgeState.closedLoopRunning = !!value;
+  }
+
+  function isClosedLoopRunning() {
+    return !!bridgeState.closedLoopRunning;
+  }
+
+  function setBridgeBusy(value) {
+    bridgeState.bridgeBusy = !!value;
+  }
+
+  function isBridgeBusy() {
+    return !!bridgeState.bridgeBusy;
+  }
+
+  function setActiveReadTab(tabId, link) {
+    bridgeState.activeReadTabId = Number(tabId || 0) || null;
+    bridgeState.activeReadLink = bridgeState.activeReadTabId ? String(link || '') : '';
+  }
+
+  function clearActiveReadTab() {
+    bridgeState.activeReadTabId = null;
+    bridgeState.activeReadLink = '';
+  }
+
+  function getActiveReadTabId() {
+    return bridgeState.activeReadTabId;
+  }
+
+  function getActiveReadLink() {
+    return bridgeState.activeReadLink;
+  }
+
+  window.fbBridgeShared = {
+    $,
+    B,
+    STORE,
+    save,
+    load,
+    text,
+    clampNumber,
+    getScanSourceMode,
+    getGroupLimit,
+    getLoopPauseSeconds,
+    getLinkPauseSeconds,
+    setBridgeStatus,
+    addInputSave,
+    parseLines,
+    normalizeUrl,
+    uniqueLinks,
+    getPostLinks,
+    setPostLinks,
+    getCommentedLinks,
+    saveCommentedLink,
+    renderCommentedLinks,
+    filterNewLinks,
+    syncPostLinksInput,
+    wirePostLinksInput,
+    getExtensionId,
+    getApifyToken,
+    delay,
+    setClosedLoopRunning,
+    isClosedLoopRunning,
+    setBridgeBusy,
+    isBridgeBusy,
+    setActiveReadTab,
+    clearActiveReadTab,
+    getActiveReadTabId,
+    getActiveReadLink
+  };
+}());

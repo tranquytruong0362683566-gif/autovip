@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>AI Auto Comment Facebook</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="side-col side-left">
+      <section class="card templates-card" aria-labelledby="leftTplTitle">
+        <div class="section-title">
+          <span id="leftTplTitle">📦 Kho mẫu trái</span>
+          <button class="btn btn-primary btn-sm" id="btnAddTplLeft" type="button">+ Thêm</button>
+        </div>
+        <div class="tpl-list" id="tplListLeft" aria-live="polite"></div>
+      </section>
+    </aside>
+
+    <main class="main-col">
+      <section class="card">
+        <header class="hero">
+          <div class="brand">
+            <div class="brand-logo" aria-hidden="true">🤖</div>
+            <div>
+              <h1>AI Auto Comment Facebook</h1>
+              <p>Quét nhóm, lọc trùng link, đọc nội dung bài viết, tạo bình luận và gửi sang tab Facebook.</p>
+            </div>
+          </div>
+          <span class="pro-badge">⚡ WEB + EXTENSION + CHATGPT API</span>
+        </header>
+
+            <details class="advanced-panel">
+              <summary>⚙️ Cài đặt nâng cao</summary>
+              <div class="advanced-content">
+                <div class="advanced-section">
+                  <div class="advanced-title">API ChatGPT</div>
+                  <div class="auth-bar auth-bar-advanced">
+                    <div class="auth-left">
+                      <div class="auth-avatar" id="authAvatar" aria-hidden="true">🔌</div>
+                      <div class="auth-info">
+                        <div class="auth-status" id="authStatus">⚠️ Chưa nhập API key ChatGPT</div>
+                        <div class="auth-username hidden" id="authUsername"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="bridge-grid bridge-grid-3">
+                    <div class="form-group">
+                      <label for="chatApiEndpointInput">API URL</label>
+                      <input type="text" id="chatApiEndpointInput" value="https://console.flatkey.ai/v1/chat/completions" spellcheck="false">
+                    </div>
+                    <div class="form-group">
+                      <label for="chatApiModelInput">Model</label>
+                      <select id="chatApiModelInput">
+                        <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+                        <option value="gpt-5.4-mini">gpt-5.4-mini</option>
+                        <option value="gpt-5-mini">gpt-5-mini</option>
+                      </select>
+                    </div>
+                    <div class="form-group api-key-group">
+                      <label for="chatApiKeyInput">API key</label>
+                      <div class="api-key-field">
+                        <span class="api-key-icon" aria-hidden="true">🔑</span>
+                        <input type="password" id="chatApiKeyInput" placeholder="Dán API key dạng sk-..." autocomplete="off" spellcheck="false">
+                        <button class="api-key-toggle" id="chatApiKeyToggle" type="button" aria-label="Hiện API key" title="Hiện API key">👁</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="hint">Web sẽ gọi trực tiếp endpoint Chat Completions bằng header Authorization: Bearer API_KEY. API key được lưu trong localStorage của trình duyệt.</div>
+
+                  <div class="notice" id="tokenBanner" role="alert">
+                    <div aria-hidden="true">⚠️</div>
+                    <div>
+                      <strong>API ChatGPT đang lỗi hoặc bị giới hạn</strong>
+                      Hãy kiểm tra API key, model, endpoint hoặc quota của tài khoản API.
+                    </div>
+                  </div>
+                </div>
+
+                <div class="advanced-section">
+                  <div class="advanced-title">Kết nối Extension</div>
+                  <div class="form-group">
+                    <label for="bridgeExtensionId">Extension ID</label>
+                    <input type="text" id="bridgeExtensionId" placeholder="Dán ID extension Bridge ở đây">
+                    <div class="hint">Mở popup extension, copy ID rồi dán vào ô này để web GitHub gửi lệnh quét/đọc/comment sang Chrome Extension.</div>
+                  </div>
+                </div>
+
+                <div class="advanced-section">
+                  <div class="advanced-title">API Apify lấy URL bài viết</div>
+                  <div class="form-group api-key-group">
+                    <label for="apifyApiTokenInput">Apify API token</label>
+                    <div class="api-key-field">
+                      <span class="api-key-icon" aria-hidden="true">🔗</span>
+                      <input type="password" id="apifyApiTokenInput" placeholder="Dán token dạng apify_api_..." autocomplete="off" spellcheck="false">
+                      <button class="api-key-toggle" id="apifyApiTokenToggle" type="button" aria-label="Hiện Apify token" title="Hiện Apify token">👁</button>
+                    </div>
+                    <div class="hint">Dùng Actor caprolok/facebook-groups-scraper. Token được lưu trong localStorage của trình duyệt. API này chỉ lấy bài viết từ nhóm Facebook công khai.</div>
+                  </div>
+                </div>
+
+                <div class="advanced-section">
+                  <div class="advanced-title">Tuỳ chọn quét link</div>
+                  <div class="form-group">
+                    <label for="scanSourceModeSelect">Nguồn quét link</label>
+                    <select id="scanSourceModeSelect">
+                      <option value="group_latest">Bài viết mới — https://www.facebook.com/groups/IDnhom/?sorting_setting=CHRONOLOGICAL</option>
+                      <option value="group_top">Bài viết Top — https://www.facebook.com/groups/IDnhom/?sorting_setting=TOP_POSTS</option>
+                    </select>
+                    <div class="hint">Bài viết mới và Bài viết Top dùng UID nhóm bên dưới để quét link. Nút Apify cũng dùng lựa chọn này để sắp xếp kết quả.</div>
+                  </div>
+                </div>
+
+                <div class="advanced-section">
+                  <div class="advanced-title">Tuỳ chỉnh vòng chạy</div>
+                  <div class="bridge-grid bridge-grid-3">
+                    <div class="form-group">
+                      <label for="groupLimitInput">Số link lấy / nhóm</label>
+                      <input id="groupLimitInput" type="number" min="1" max="50" step="1" value="5">
+                      <div class="hint">Mặc định 5 link mới nhất cho mỗi nhóm.</div>
+                    </div>
+                    <div class="form-group">
+                      <label for="loopPauseSecondsInput">Nghỉ sau mỗi vòng</label>
+                      <input id="loopPauseSecondsInput" type="number" min="0" max="86400" step="1" value="240">
+                      <div class="hint">Tính bằng giây. Nhập 0 nếu muốn quét tiếp ngay.</div>
+                    </div>
+                    <div class="form-group">
+                      <label for="linkPauseSecondsInput">Nghỉ sau mỗi link</label>
+                      <input id="linkPauseSecondsInput" type="number" min="0" max="86400" step="1" value="60">
+                      <div class="hint">Tính bằng giây. Áp dụng sau khi chạy xong từng link.</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="advanced-section">
+                  <div class="advanced-title">Tuỳ chọn tab Facebook</div>
+                  <div class="bridge-grid">
+                    <div class="form-group">
+                      <label for="fbDelayMs">Thời gian chờ tải tab</label>
+                      <input id="fbDelayMs" type="number" min="1000" max="30000" step="500" value="5000">
+                    </div>
+                  </div>
+                  <div class="check-list">
+                    <label class="check-row"><input id="autoCommentAfterGenerate" type="checkbox" checked> Tạo xong bình luận thì tự gửi bình luận vào tab bài viết Facebook</label>
+                    <label class="check-row"><input id="closeAfterComment" type="checkbox" checked> Đóng tab Facebook sau khi gửi bình luận xong</label>
+                  </div>
+                </div>
+              </div>
+            </details>
+
+
+
+        <div class="workflow-stack">
+          <section class="workflow-panel bridge-box" aria-labelledby="autoRunTitle">
+            <div class="panel-heading">
+              <div>
+                <h2 id="autoRunTitle">1. Chạy tự động từ nhóm Facebook</h2>
+                <p>Nhập UID hoặc link nhóm, rồi bấm chạy tự động. Các tuỳ chọn phụ đã gom vào Cài đặt nâng cao.</p>
+              </div>
+              <span class="counter">Quét → lọc trùng → comment</span>
+            </div>
+
+            <div class="form-group">
+              <label for="fbGroupIdInput">UID nhóm Facebook</label>
+              <textarea id="fbGroupIdInput" spellcheck="false" placeholder="Nhập nhiều UID nhóm hoặc link nhóm, mỗi dòng một nhóm"></textarea>
+              <div class="hint">Chỉ cần nhập lần đầu. Mỗi lượt sẽ quét theo số link/nhóm bên dưới, tự lọc link đã comment trước đó rồi mới xử lý.</div>
+            </div>
+
+            <div class="actions bridge-actions bridge-actions-main">
+              <button class="btn btn-warning" id="apifyScanBtn" type="button">🔗 Lấy URL bằng Apify</button>
+              <button class="btn btn-primary" id="scanGroupLinksBtn" type="button">🚀 Chạy tự động</button>
+              <button class="btn btn-soft" id="autoWorkflowBtn" type="button">Chạy link hiện có</button>
+              <button class="btn btn-danger hidden" id="stopClosedLoopBtn" type="button">⛔ Dừng</button>
+            </div>
+            <div class="automation-status" id="bridgeStatus">Sẵn sàng kết nối extension.</div>
+          </section>
+
+          <section class="workflow-panel" aria-labelledby="linksTitle">
+            <div class="panel-heading compact">
+              <div>
+                <h2 id="linksTitle">2. Link bài viết Facebook</h2>
+                <p>Mỗi link một dòng. Link đã comment xong sẽ tự bị loại khỏi ô này.</p>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="fbPostLinkInput">Link bài viết Facebook</label>
+              <textarea id="fbPostLinkInput" spellcheck="false" placeholder="Link mới sau khi quét sẽ tự đổ vào đây. Link đã comment trước sẽ tự bị loại."></textarea>
+              <div class="hint">Có thể dán link thủ công hoặc để chức năng quét nhóm tự đổ link vào đây.</div>
+            </div>
+          </section>
+
+          <section class="workflow-panel" aria-labelledby="contentTitle">
+            <div class="panel-heading compact">
+              <div>
+                <h2 id="contentTitle">3. Nội dung, sản phẩm và phong cách</h2>
+                <p>Phần này dùng cho AI tạo bình luận. Có thể điền thủ công hoặc để extension tự đọc bài viết.</p>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <div class="label-row">
+                  <label for="articleInput">Nội dung bài viết gốc</label>
+                  <button class="btn btn-soft btn-sm" id="pasteBtn" type="button">📋 Dán nội dung</button>
+                </div>
+                <textarea id="articleInput" maxlength="6000" placeholder="Dán nội dung bài viết cần trả lời vào đây..."></textarea>
+                <div class="field-status">
+                  <span class="hint">AI sẽ phân loại trước: bài người bán/cho thuê chỉ trả (next) khi không trùng tên sản phẩm; nếu trùng sản phẩm đang bán thì vẫn tạo lời giới thiệu.</span>
+                  <span class="counter" id="articleCounter">0/6000</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="productNameInput">Tên sản phẩm</label>
+                <input type="text" id="productNameInput" maxlength="160" placeholder="VD: Đèn năng lượng mặt trời 300W, Inverter LuxPower...">
+                <div class="field-status">
+                  <span class="hint">Không bắt buộc, nhưng nên nhập để bình luận rõ ý hơn.</span>
+                  <span class="counter" id="productCounter">0/160</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="shopeeTargetCountInput">Số link Shopee muốn tạo tự động</label>
+                <input type="number" id="shopeeTargetCountInput" min="1" max="100" step="1" value="5" inputmode="numeric" placeholder="VD: 5">
+                <div class="hint">Khi danh sách còn 1 link Shopee, web sẽ dùng link còn lại để tạo thêm đúng số lượng này.</div>
+              </div>
+
+              <div class="form-group">
+                <label for="productLinkInput">Danh sách link Shopee / link sản phẩm</label>
+                <textarea id="productLinkInput" placeholder="Mỗi link một dòng. Hệ thống sẽ lấy link đầu tiên đưa cho API ChatGPT, xoá link đó khỏi danh sách, rồi tự bù link Shopee khi gần hết."></textarea>
+                <div class="field-status">
+                  <span class="link-preview" id="linkStatus">Chưa có link sản phẩm</span>
+                  <span class="counter" id="linkCounter">0 link</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="toneSelect">🎭 Phong cách bình luận</label>
+                <select id="toneSelect">
+                  <option value="đời thường, gần gũi, tự nhiên như người thật bình luận">🌱 Đời thường & tự nhiên</option>
+                  <option value="hài hước nhẹ, bắt trend vừa phải, không lố và không spam">🔥 Hài hước & bắt trend</option>
+                  <option value="chuyên gia tư vấn, có logic, ngắn gọn và đáng tin">💼 Chuyên gia tư vấn</option>
+                  <option value="tích cực, đồng cảm, khen vừa đủ, không sáo rỗng">❤️ Tích cực & đồng cảm</option>
+                  <option value="bán hàng mềm, gợi ý khéo, không ép mua và không phóng đại">🛒 Bán hàng mềm</option>
+                </select>
+              </div>
+
+              <div class="actions">
+                <button class="btn btn-primary" id="generateBtn" type="button">✨ Tạo bình luận</button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <section class="output-box" aria-live="polite">
+          <div class="output-header">
+            <span class="output-title">✨ Kết quả bình luận</span>
+          </div>
+          <div id="output" class="placeholder">Bình luận sẽ xuất hiện tại đây...</div>
+        </section>
+      </section>
+    </main>
+
+    <aside class="side-col side-right">
+      <section class="card templates-card" aria-labelledby="rightTplTitle">
+        <div class="section-title">
+          <span id="rightTplTitle">📦 Kho mẫu phải</span>
+          <button class="btn btn-primary btn-sm" id="btnAddTpl" type="button">+ Thêm</button>
+        </div>
+        <div class="tpl-list" id="tplList" aria-live="polite"></div>
+      </section>
+    </aside>
+
+    <section class="card stats-card completed-card completed-card-bottom" aria-labelledby="statsTitle">
+      <div class="section-title" id="statsTitle">
+        <span>✅ Link đã comment xong</span>
+        <button class="btn btn-muted btn-sm" id="clearCommentedLinksBtn" type="button">Xoá log</button>
+      </div>
+      <div class="stat-row"><span>Tổng link đã chạy</span><strong id="commentedCountStat">0</strong></div>
+      <textarea id="commentedLinksBox" readonly spellcheck="false" placeholder="Các link đã comment xong sẽ được tổng hợp tại đây..."></textarea>
+      <div class="hint">Các link trong danh sách này sẽ được dùng để lọc trùng ở lần quét sau.</div>
+      <div class="hidden" aria-hidden="true">
+        <strong id="validLinkStat">0</strong>
+        <strong id="leftTplStat">0</strong>
+        <strong id="rightTplStat">0</strong>
+        <strong id="historyStat">0</strong>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-overlay" id="templateModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <h2 id="modalTitle">Thêm mẫu mới</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="tplNameInput">Tên mẫu</label>
+          <input type="text" id="tplNameInput" maxlength="90" placeholder="VD: Đèn NLMT - khách hỏi mua">
+        </div>
+        <div class="form-group">
+          <label for="tplProductInput">Tên sản phẩm</label>
+          <input type="text" id="tplProductInput" maxlength="160" placeholder="VD: Đèn năng lượng mặt trời 300W">
+        </div>
+        <div class="form-group">
+          <label for="tplLinksInput">Danh sách link</label>
+          <textarea id="tplLinksInput" placeholder="Mỗi link một dòng"></textarea>
+        </div>
+      </div>
+      <div class="modal-btns">
+        <button class="btn btn-primary" id="btnSaveTpl" type="button">💾 Lưu mẫu</button>
+        <button class="btn btn-muted" id="btnCancelTpl" type="button">Huỷ</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-host" id="toastHost" aria-live="polite"></div>
+
+  <script src="chatgpt-api.js"></script>
+  <script src="bridge-state.js"></script>
+  <script src="bridge-api.js"></script>
+  <script src="apify-api.js"></script>
+  <script src="bridge-workflow.js"></script>
+</body>
+</html>

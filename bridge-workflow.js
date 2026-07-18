@@ -6,6 +6,234 @@
   const APIFY = window.apifyGroupsApi;
   const B = S.B;
   let fatalStopMessage = '';
+  let facebookAccountRefreshPromise = null;
+  let facebookLogoutPromise = null;
+  let facebookCookieRotationPromise = null;
+  let autoRestartScheduled = false;
+  let facebookAccountStateInitialized = false;
+  let lastFacebookLoggedIn = false;
+
+  function updateKnownFacebookAccount(loggedIn, uid) {
+    const previousLoggedIn = lastFacebookLoggedIn;
+    const wasInitialized = facebookAccountStateInitialized;
+    lastFacebookLoggedIn = Boolean(loggedIn && S.text(uid));
+    facebookAccountStateInitialized = true;
+    return wasInitialized && previousLoggedIn && !lastFacebookLoggedIn;
+  }
+
+  function getFacebookCookieLines() {
+    return String(B.facebookCookiesInput?.value || '')
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(Boolean);
+  }
+
+  function takeNextFacebookCookie() {
+    const lines = getFacebookCookieLines();
+    const cookie = lines.shift() || '';
+    if (B.facebookCookiesInput) B.facebookCookiesInput.value = lines.join('\n');
+    S.save(S.STORE.facebookCookies, B.facebookCookiesInput?.value || '');
+    return cookie;
+  }
+
+  async function waitForFacebookUid({ timeoutMs = 45000, intervalMs = 1000 } = {}) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const response = await API.sendBridge(
+        ['GET_FACEBOOK_ACCOUNT', 'GET_FB_UID', 'FACEBOOK_ACCOUNT_STATUS'],
+        {}
+      );
+      const data = API.bridgeResponseData(response);
+      const uid = S.text(data.uid || data.facebookUid || data.cUser);
+      const loggedIn = data.loggedIn === true || Boolean(uid);
+      renderFacebookAccount({ loggedIn, uid });
+      updateKnownFacebookAccount(loggedIn, uid);
+      if (loggedIn && uid) return { ...data, uid, loggedIn };
+      await S.delay(intervalMs);
+    }
+    throw new Error('Quá thời gian chờ Extension cập nhật UID sau khi Login Cookie.');
+  }
+
+  function scheduleAutoRunByApi(uid) {
+    if (autoRestartScheduled) return;
+    autoRestartScheduled = true;
+
+    (async () => {
+      try {
+        const deadline = Date.now() + 120000;
+        while (Date.now() < deadline) {
+          if (!S.isBridgeBusy() && !S.isClosedLoopRunning() && !B.scanGroupLinksBtn?.disabled) break;
+          await S.delay(500);
+        }
+
+        if (S.isBridgeBusy() || S.isClosedLoopRunning() || B.scanGroupLinksBtn?.disabled) {
+          throw new Error('Không thể tự chạy lại vì tác vụ cũ chưa kết thúc.');
+        }
+
+        const account = await refreshFacebookAccount({ silent: true });
+        if (!account?.loggedIn || !account?.uid) {
+          throw new Error('UID mới không còn đăng nhập trước lúc chạy lại.');
+        }
+
+        S.setBridgeStatus(`Đã có UID ${uid || account.uid}. Đang tự động bấm 🚀 Chạy tự động bằng API...`, 'ok');
+        B.scanGroupLinksBtn?.click();
+      } catch (error) {
+        S.setBridgeStatus(`Không thể tự chạy lại bằng API: ${error.message || error}`, 'error');
+      } finally {
+        autoRestartScheduled = false;
+      }
+    })();
+  }
+
+  async function rotateFacebookCookieAfterLogout({ source = 'account-status' } = {}) {
+    if (facebookCookieRotationPromise) return facebookCookieRotationPromise;
+
+    facebookCookieRotationPromise = (async () => {
+      const cookie = takeNextFacebookCookie();
+      if (!cookie) {
+        S.setBridgeStatus('UID đã đăng xuất nhưng ô Cookie Facebook không còn dòng cookie nào để đăng nhập tiếp.', 'error');
+        return null;
+      }
+
+      S.setBridgeStatus('UID đã đăng xuất. Đã lấy và xóa 1 dòng Cookie Facebook; đang gửi vào Login Cookie New của Extension...', 'warn');
+
+      const response = await API.sendBridge(
+        ['LOGIN_FACEBOOK_COOKIE', 'IMPORT_FACEBOOK_COOKIE', 'FB_LOGIN_COOKIE'],
+        { cookie, cookieText: cookie, source }
+      );
+      const data = API.bridgeResponseData(response);
+      const immediateUid = S.text(data.uid || data.facebookUid || data.cUser);
+      const account = immediateUid
+        ? { ...data, uid: immediateUid, loggedIn: true }
+        : await waitForFacebookUid();
+
+      renderFacebookAccount({ loggedIn: true, uid: account.uid });
+      updateKnownFacebookAccount(true, account.uid);
+      S.setBridgeStatus(`Login Cookie thành công. Đã phát hiện UID ${account.uid}; đang chuẩn bị chạy tự động bằng API...`, 'ok');
+      scheduleAutoRunByApi(account.uid);
+      return account;
+    })().catch(error => {
+      S.setBridgeStatus(`Đăng nhập cookie tự động thất bại: ${error.message || error}`, 'error');
+      throw error;
+    }).finally(() => {
+      facebookCookieRotationPromise = null;
+    });
+
+    return facebookCookieRotationPromise;
+  }
+
+  function renderFacebookAccount({ loggedIn = false, uid = '', message = '', error = false } = {}) {
+    const cleanUid = S.text(uid);
+    if (B.facebookUidDisplay) {
+      B.facebookUidDisplay.textContent = message || (loggedIn && cleanUid
+        ? `UID đang đăng nhập: ${cleanUid}`
+        : 'Chưa phát hiện tài khoản Facebook đang đăng nhập.');
+    }
+    B.facebookAccountBar?.classList.toggle('logged-in', Boolean(loggedIn && cleanUid));
+    B.facebookAccountBar?.classList.toggle('account-error', Boolean(error));
+    if (B.facebookLogoutBtn) {
+      B.facebookLogoutBtn.disabled = !loggedIn || !cleanUid || Boolean(facebookLogoutPromise);
+    }
+  }
+
+  async function refreshFacebookAccount({ silent = false } = {}) {
+    if (facebookAccountRefreshPromise) return facebookAccountRefreshPromise;
+
+    const extensionId = S.getExtensionId();
+    if (!extensionId) {
+      renderFacebookAccount({ message: 'Chưa nhập Extension ID.', error: true });
+      return null;
+    }
+
+    facebookAccountRefreshPromise = (async () => {
+      try {
+        if (!silent) renderFacebookAccount({ message: 'Đang lấy UID từ Extension...' });
+        const response = await API.sendBridge(
+          ['GET_FACEBOOK_ACCOUNT', 'GET_FB_UID', 'FACEBOOK_ACCOUNT_STATUS'],
+          {}
+        );
+        const data = API.bridgeResponseData(response);
+        const uid = S.text(data.uid || data.facebookUid || data.cUser);
+        const loggedIn = data.loggedIn === true || Boolean(uid);
+        renderFacebookAccount({ loggedIn, uid });
+        const transitionedToLoggedOut = updateKnownFacebookAccount(loggedIn, uid);
+        if (transitionedToLoggedOut && !facebookLogoutPromise && !facebookCookieRotationPromise) {
+          rotateFacebookCookieAfterLogout({ source: 'extension-status-change' }).catch(() => {});
+        }
+        return { ...data, uid, loggedIn };
+      } catch (error) {
+        renderFacebookAccount({
+          message: `Không lấy được UID từ Extension: ${error.message || error}`,
+          error: true
+        });
+        if (!silent) S.setBridgeStatus(error.message || String(error), 'error');
+        return null;
+      } finally {
+        facebookAccountRefreshPromise = null;
+      }
+    })();
+
+    return facebookAccountRefreshPromise;
+  }
+
+  async function logoutFacebookAccount({ automatic = false, reason = '' } = {}) {
+    if (facebookLogoutPromise) return facebookLogoutPromise;
+
+    facebookLogoutPromise = (async () => {
+      const oldText = B.facebookLogoutBtn?.textContent || 'Đăng xuất';
+      if (B.facebookLogoutBtn) {
+        B.facebookLogoutBtn.disabled = true;
+        B.facebookLogoutBtn.textContent = automatic ? 'Đang tự đăng xuất...' : 'Đang đăng xuất...';
+      }
+
+      if (automatic) {
+        S.setBridgeStatus(`${reason || 'Phát hiện lỗi giới hạn Facebook.'}
+Đang tự động gọi nút Đăng xuất trên Extension...`, 'error');
+      }
+
+      try {
+        const response = await API.sendBridge(
+          ['LOGOUT_FACEBOOK', 'FB_LOGOUT', 'LOGOUT_FB_ACCOUNT'],
+          { automatic, reason }
+        );
+        const data = API.bridgeResponseData(response);
+        const previousUid = S.text(data.previousUid || data.uidBeforeLogout);
+        const removedCookies = Number(data.removedCookies ?? data.removed ?? 0);
+
+        renderFacebookAccount({
+          loggedIn: false,
+          uid: '',
+          message: previousUid
+            ? `Đã đăng xuất UID: ${previousUid}`
+            : 'Đã đăng xuất tài khoản Facebook.'
+        });
+        updateKnownFacebookAccount(false, '');
+
+        if (!automatic) {
+          S.setBridgeStatus(`Đã đăng xuất Facebook và xóa ${removedCookies} cookie.`, 'ok');
+        }
+
+        try {
+          await rotateFacebookCookieAfterLogout({
+            source: automatic ? 'automatic-facebook-restriction' : 'web-logout-button'
+          });
+        } catch (_) {}
+        return { ...data, previousUid, removedCookies };
+      } catch (error) {
+        await refreshFacebookAccount({ silent: true });
+        if (!automatic) S.setBridgeStatus(`Đăng xuất Facebook thất bại: ${error.message || error}`, 'error');
+        throw error;
+      } finally {
+        if (B.facebookLogoutBtn) B.facebookLogoutBtn.textContent = oldText;
+        facebookLogoutPromise = null;
+        if (B.facebookLogoutBtn) {
+          B.facebookLogoutBtn.disabled = !B.facebookAccountBar?.classList.contains('logged-in');
+        }
+      }
+    })();
+
+    return facebookLogoutPromise;
+  }
 
   async function waitAfterLink(linkIndex, totalLinks) {
     const seconds = S.getLinkPauseSeconds();
@@ -53,6 +281,7 @@
       throw error;
     }
 
+    const actorId = S.getApifyActorId();
     const token = S.getApifyToken();
     if (!token) {
       S.setBridgeStatus('Hãy nhập Apify API token trong Cài đặt nâng cao.', 'warn');
@@ -67,9 +296,10 @@
     const modeLabel = scanModeLabel(scanMode);
     const expectedMax = Math.min(1024, groupLimit * groups.length);
 
-    S.setBridgeStatus(`Đang gọi Apify lấy URL ${modeLabel}, tối đa ${expectedMax} kết quả...`, 'warn');
+    S.setBridgeStatus(`Đang gọi Actor ${actorId} lấy URL ${modeLabel}, tối đa ${expectedMax} kết quả...`, 'warn');
 
     const result = await APIFY.fetchPostUrls({
+      actorId,
       token,
       groups,
       limit: groupLimit,
@@ -161,8 +391,8 @@
         comment,
         text: comment,
         commentText: comment,
-        waitAfterSendMinMs: 7000,
-        waitAfterSendMaxMs: 10000,
+        waitAfterSendMinMs: 11000,
+        waitAfterSendMaxMs: 11000,
         closeAfterComment: !!B.closeAfterComment?.checked,
         closeAfter: !!B.closeAfterComment?.checked,
         openInBackground: true,
@@ -173,9 +403,25 @@
 
     const responseData = API.bridgeResponseData(response);
     if (responseData?.restrictionDetected || responseData?.fatalStop || responseData?.code === 'FACEBOOK_FEATURE_RESTRICTED') {
-      fatalStopMessage = responseData.message || 'Facebook đang tạm giới hạn tính năng đăng bài/bình luận. Hệ thống đã dừng.';
+      const restrictionMessage = responseData.message || 'Facebook đang tạm giới hạn tính năng đăng bài/bình luận. Hệ thống đã dừng.';
       S.setClosedLoopRunning(false);
       B.stopClosedLoopBtn?.classList.add('hidden');
+      S.clearActiveReadTab();
+
+      let logoutSuffix = '';
+      try {
+        const logoutResult = await logoutFacebookAccount({
+          automatic: true,
+          reason: restrictionMessage
+        });
+        logoutSuffix = logoutResult?.previousUid
+          ? ` Đã tự động đăng xuất UID ${logoutResult.previousUid}.`
+          : ' Đã tự động đăng xuất tài khoản Facebook.';
+      } catch (logoutError) {
+        logoutSuffix = ` Không thể tự động đăng xuất: ${logoutError.message || logoutError}.`;
+      }
+
+      fatalStopMessage = `${restrictionMessage}${logoutSuffix}`;
       S.setBridgeStatus(fatalStopMessage, 'error');
       const stopError = new Error(fatalStopMessage);
       stopError.stopClosedLoop = true;
@@ -352,6 +598,9 @@
 
   function wireBridge() {
     S.addInputSave(B.extensionId, S.STORE.extensionId);
+    S.addInputSave(B.facebookCookiesInput, S.STORE.facebookCookies);
+    S.addInputSave(B.apifyActorIdInput, S.STORE.apifyActorId);
+    S.getApifyActorId();
     S.addInputSave(B.apifyApiTokenInput, S.STORE.apifyToken);
     wireSecretToggle(B.apifyApiTokenInput, B.apifyApiTokenToggle, 'Apify token');
     S.addInputSave(B.fbGroupIdInput, S.STORE.groupIds);
@@ -369,6 +618,20 @@
     S.getLoopPauseSeconds();
     S.getLinkPauseSeconds();
     S.renderCommentedLinks();
+
+    B.facebookLogoutBtn?.addEventListener('click', () => {
+      logoutFacebookAccount().catch(() => {});
+    });
+    B.extensionId?.addEventListener('change', () => refreshFacebookAccount({ silent: true }));
+    B.extensionId?.addEventListener('blur', () => refreshFacebookAccount({ silent: true }));
+    window.addEventListener('focus', () => refreshFacebookAccount({ silent: true }));
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) refreshFacebookAccount({ silent: true });
+    });
+    window.setTimeout(() => refreshFacebookAccount({ silent: true }), 150);
+    window.setInterval(() => {
+      if (!document.hidden) refreshFacebookAccount({ silent: true });
+    }, 2000);
 
     B.apifyScanBtn?.addEventListener('click', () => runBridgeTask(() => scanGroupLinksByApify()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
     B.scanGroupLinksBtn?.addEventListener('click', () => runBridgeTask(() => runClosedGroupLoop()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
@@ -393,6 +656,8 @@
     runClosedGroupLoop,
     readFirstFacebookPost,
     autoWorkflow,
-    commentCurrentTab
+    commentCurrentTab,
+    refreshFacebookAccount,
+    logoutFacebookAccount
   };
 }());

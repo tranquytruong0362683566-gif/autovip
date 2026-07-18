@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const ACTOR_ID = 'caprolok~facebook-groups-scraper';
+  const DEFAULT_ACTOR_ID = 'caprolok~facebook-groups-scraper';
   const API_BASE_URL = 'https://api.apify.com/v2';
   const REQUEST_TIMEOUT_MS = 295000;
 
@@ -22,6 +22,27 @@
 
   function text(value) {
     return String(value ?? '').trim();
+  }
+
+  function normalizeActorId(value) {
+    let actorId = text(value) || DEFAULT_ACTOR_ID;
+
+    actorId = actorId
+      .replace(/^https?:\/\/(?:console\.)?apify\.com\/actors\//i, '')
+      .replace(/^\/+|\/+$/g, '')
+      .split(/[?#]/, 1)[0]
+      .trim();
+
+    const ownerActorMatch = actorId.match(/^([^/\s]+)\/([^/\s]+)$/);
+    if (ownerActorMatch) actorId = `${ownerActorMatch[1]}~${ownerActorMatch[2]}`;
+
+    if (!/^[A-Za-z0-9._-]+(?:~[A-Za-z0-9._-]+)?$/.test(actorId)) {
+      const error = new Error('Apify Actor ID không hợp lệ. Hãy nhập dạng owner~actor, owner/actor hoặc Actor ID nội bộ.');
+      error.code = 'APIFY_ACTOR_ID_INVALID';
+      throw error;
+    }
+
+    return actorId;
   }
 
   function normalizeFacebookHost(hostname) {
@@ -195,6 +216,7 @@
   }
 
   async function fetchPostUrls(options = {}) {
+    const actorId = normalizeActorId(options.actorId);
     const token = text(options.token);
     if (!token) {
       const error = new Error('Chưa nhập Apify API token.');
@@ -214,7 +236,7 @@
     const maxResults = Math.max(1, Math.min(1024, perGroupLimit * groupUrls.length));
     const sortBy = resolveSortBy(options.scanMode);
 
-    const endpoint = new URL(`${API_BASE_URL}/actors/${ACTOR_ID}/run-sync-get-dataset-items`);
+    const endpoint = new URL(`${API_BASE_URL}/actors/${encodeURIComponent(actorId)}/run-sync-get-dataset-items`);
     endpoint.searchParams.set('format', 'json');
     endpoint.searchParams.set('clean', 'true');
     endpoint.searchParams.set('timeout', '300');
@@ -263,7 +285,7 @@
             : [];
 
       return {
-        actorId: ACTOR_ID,
+        actorId,
         groupUrls,
         perGroupLimit,
         maxResults,
@@ -285,7 +307,8 @@
   }
 
   window.apifyGroupsApi = {
-    ACTOR_ID,
+    DEFAULT_ACTOR_ID,
+    normalizeActorId,
     normalizeGroupUrl,
     normalizePostUrl,
     extractPostUrls,

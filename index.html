@@ -32,6 +32,17 @@
           <span class="pro-badge">⚡ WEB + EXTENSION + CHATGPT API</span>
         </header>
 
+        <div class="facebook-account-bar" id="facebookAccountBar" aria-live="polite">
+          <div class="facebook-account-main">
+            <div class="facebook-account-icon" aria-hidden="true">f</div>
+            <div class="facebook-account-text">
+              <span class="facebook-account-label">Tài khoản Facebook đang kết nối</span>
+              <strong id="facebookUidDisplay">Đang lấy UID từ Extension...</strong>
+            </div>
+          </div>
+          <button class="btn btn-danger btn-sm" id="facebookLogoutBtn" type="button" disabled>Đăng xuất</button>
+        </div>
+
             <details class="advanced-panel">
               <summary>⚙️ Cài đặt nâng cao</summary>
               <div class="advanced-content">
@@ -90,7 +101,21 @@
                 </div>
 
                 <div class="advanced-section">
+                  <div class="advanced-title">Đổi tài khoản Facebook tự động</div>
+                  <div class="form-group">
+                    <label for="facebookCookiesInput">Cookie Facebook</label>
+                    <textarea id="facebookCookiesInput" spellcheck="false" placeholder="Mỗi dòng một cookie Facebook. Hỗ trợ dạng cookie thuần hoặc UID|cookie|user-agent."></textarea>
+                    <div class="hint">Khi Web xác nhận UID đã đăng xuất, hệ thống lấy dòng đầu tiên, xóa dòng đó khỏi danh sách, gửi sang Login Cookie New của Extension, chờ UID mới xuất hiện rồi tự bấm 🚀 Chạy tự động bằng API.</div>
+                  </div>
+                </div>
+
+                <div class="advanced-section">
                   <div class="advanced-title">API Apify lấy URL bài viết</div>
+                  <div class="form-group">
+                    <label for="apifyActorIdInput">Apify Actor ID</label>
+                    <input type="text" id="apifyActorIdInput" value="caprolok~facebook-groups-scraper" placeholder="Ví dụ: caprolok~facebook-groups-scraper" autocomplete="off" spellcheck="false">
+                    <div class="hint">Có thể nhập dạng owner~actor, owner/actor hoặc Actor ID nội bộ. Mặc định: caprolok~facebook-groups-scraper.</div>
+                  </div>
                   <div class="form-group api-key-group">
                     <label for="apifyApiTokenInput">Apify API token</label>
                     <div class="api-key-field">
@@ -98,7 +123,7 @@
                       <input type="password" id="apifyApiTokenInput" placeholder="Dán token dạng apify_api_..." autocomplete="off" spellcheck="false">
                       <button class="api-key-toggle" id="apifyApiTokenToggle" type="button" aria-label="Hiện Apify token" title="Hiện Apify token">👁</button>
                     </div>
-                    <div class="hint">Dùng Actor caprolok/facebook-groups-scraper. Token được lưu trong localStorage của trình duyệt. API này chỉ lấy bài viết từ nhóm Facebook công khai.</div>
+                    <div class="hint">Token được lưu trong localStorage của trình duyệt. Actor được lấy từ ô Apify Actor ID phía trên.</div>
                   </div>
                 </div>
 

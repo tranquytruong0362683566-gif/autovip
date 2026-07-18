@@ -5,6 +5,11 @@
 
   const B = {
     extensionId: $('#bridgeExtensionId'),
+    facebookAccountBar: $('#facebookAccountBar'),
+    facebookUidDisplay: $('#facebookUidDisplay'),
+    facebookLogoutBtn: $('#facebookLogoutBtn'),
+    facebookCookiesInput: $('#facebookCookiesInput'),
+    apifyActorIdInput: $('#apifyActorIdInput'),
     apifyApiTokenInput: $('#apifyApiTokenInput'),
     apifyApiTokenToggle: $('#apifyApiTokenToggle'),
     fbGroupIdInput: $('#fbGroupIdInput'),
@@ -33,6 +38,8 @@
 
   const STORE = {
     extensionId: 'truong_fb_bridge_extension_id_v1',
+    facebookCookies: 'truong_fb_bridge_facebook_cookies_v1',
+    apifyActorId: 'truong_fb_bridge_apify_actor_id_v1',
     apifyToken: 'truong_fb_bridge_apify_token_v1',
     groupIds: 'truong_fb_bridge_group_ids_v1',
     groupLimit: 'truong_fb_bridge_group_limit_v1',
@@ -249,6 +256,14 @@
     return id;
   }
 
+  function getApifyActorId() {
+    const defaultActorId = 'caprolok~facebook-groups-scraper';
+    const actorId = text(B.apifyActorIdInput?.value) || defaultActorId;
+    if (B.apifyActorIdInput) B.apifyActorIdInput.value = actorId;
+    save(STORE.apifyActorId, actorId);
+    return actorId;
+  }
+
   function getApifyToken() {
     const token = text(B.apifyApiTokenInput?.value);
     if (token) save(STORE.apifyToken, token);
@@ -321,6 +336,7 @@
     updatePostLinkCounter,
     wirePostLinksInput,
     getExtensionId,
+    getApifyActorId,
     getApifyToken,
     delay,
     setClosedLoopRunning,

@@ -146,7 +146,7 @@
       S.setBridgeStatus('AI trả về (next), không gửi bình luận cho bài này.', 'warn');
       return { ok: true, skipped: true, reason: 'next' };
     }
-    S.setBridgeStatus('Đang gửi bình luận sang tab Facebook...', 'warn');
+    S.setBridgeStatus('Đang mở tab Facebook ẩn, chờ tải trang và gửi bình luận...', 'warn');
 
     const targetLink = link || S.getPostLinks()[0] || '';
     const activeTabId = S.getActiveReadTabId();
@@ -165,8 +165,9 @@
         waitAfterSendMaxMs: 10000,
         closeAfterComment: !!B.closeAfterComment?.checked,
         closeAfter: !!B.closeAfterComment?.checked,
-        activateTab: true,
-        active: true
+        openInBackground: true,
+        activateTab: false,
+        active: false
       }
     );
 

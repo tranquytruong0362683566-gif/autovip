@@ -70,18 +70,33 @@
     return `https://www.facebook.com/groups/${encodeURIComponent(groupId)}`;
   }
 
-  function isFacebookPostUrl(url) {
-    if (!(url instanceof URL)) return false;
-    if (normalizeFacebookHost(url.hostname) !== 'www.facebook.com') return false;
-
-    const pathname = url.pathname.replace(/\/+$/, '');
-    if (/\/groups\/[^/]+\/(?:posts|permalink)\/[^/?#]+/i.test(pathname)) return true;
-    if (/^\/[^/]+\/posts\/[^/?#]+/i.test(pathname)) return true;
-    if (/\/(?:story|permalink)\.php$/i.test(pathname)) {
-      return !!(url.searchParams.get('story_fbid') || url.searchParams.get('fbid'));
+  function normalizePathSegment(value) {
+    const raw = text(value);
+    if (!raw) return '';
+    try {
+      return encodeURIComponent(decodeURIComponent(raw));
+    } catch {
+      return encodeURIComponent(raw);
     }
+  }
 
-    return false;
+  function extractGroupPostParts(url) {
+    if (!(url instanceof URL)) return null;
+    if (normalizeFacebookHost(url.hostname) !== 'www.facebook.com') return null;
+
+    const pathname = url.pathname.replace(/\/{2,}/g, '/').replace(/\/+$/, '');
+    const match = pathname.match(/^\/groups\/([^/?#]+)\/(?:posts|permalink)\/([^/?#]+)$/i);
+    if (!match?.[1] || !match?.[2]) return null;
+
+    const groupId = normalizePathSegment(match[1]);
+    const postId = normalizePathSegment(match[2]);
+    if (!groupId || !postId) return null;
+
+    return { groupId, postId };
+  }
+
+  function isFacebookPostUrl(url) {
+    return !!extractGroupPostParts(url);
   }
 
   function normalizePostUrl(value) {
@@ -92,22 +107,10 @@
     url.protocol = 'https:';
     url.hash = '';
 
-    if (!isFacebookPostUrl(url)) return '';
+    const parts = extractGroupPostParts(url);
+    if (!parts) return '';
 
-    const pathname = url.pathname.replace(/\/{2,}/g, '/').replace(/\/+$/, '');
-    url.pathname = pathname;
-
-    if (/\/(?:story|permalink)\.php$/i.test(pathname)) {
-      const storyFbid = url.searchParams.get('story_fbid') || url.searchParams.get('fbid');
-      const ownerId = url.searchParams.get('id');
-      const cleanUrl = new URL(`https://www.facebook.com${pathname}`);
-      if (storyFbid) cleanUrl.searchParams.set('story_fbid', storyFbid);
-      if (ownerId) cleanUrl.searchParams.set('id', ownerId);
-      return cleanUrl.toString();
-    }
-
-    url.search = '';
-    return url.toString();
+    return `https://www.facebook.com/groups/${parts.groupId}/permalink/${parts.postId}/`;
   }
 
   function collectUrlStrings(value, output, depth = 0) {

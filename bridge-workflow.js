@@ -83,12 +83,12 @@
 
     if (links.length) {
       S.setBridgeStatus(
-        `Apify trả về ${result.itemCount} bản ghi, đã lấy ${links.length} URL bài viết mới và điền vào ô Link bài viết Facebook. Tổng hàng đợi hiện có ${queuedLinks.length} link.`,
+        `Apify trả về ${result.itemCount} bản ghi, đã lấy ${links.length} URL /permalink/ mới và điền vào ô Link bài viết Facebook. Tổng hàng đợi hiện có ${queuedLinks.length} link.`,
         'ok'
       );
     } else if (result.itemCount > 0) {
       S.setBridgeStatus(
-        `Apify trả về ${result.itemCount} bản ghi nhưng không tìm thấy URL bài viết mới hợp lệ hoặc tất cả link đã có trong log.`,
+        `Apify trả về ${result.itemCount} bản ghi nhưng không tìm thấy URL /permalink/ mới hợp lệ hoặc tất cả link đã có trong log.`,
         'warn'
       );
     } else {

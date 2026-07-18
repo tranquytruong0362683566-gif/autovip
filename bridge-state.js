@@ -13,6 +13,7 @@
     loopPauseSecondsInput: $('#loopPauseSecondsInput'),
     linkPauseSecondsInput: $('#linkPauseSecondsInput'),
     fbPostLinkInput: $('#fbPostLinkInput'),
+    fbPostLinkCounter: $('#fbPostLinkCounter'),
     scanGroupLinksBtn: $('#scanGroupLinksBtn'),
     apifyScanBtn: $('#apifyScanBtn'),
     stopClosedLoopBtn: $('#stopClosedLoopBtn'),
@@ -132,8 +133,25 @@
     try {
       const url = new URL(String(raw).trim());
       url.hash = '';
+      url.protocol = 'https:';
       url.hostname = url.hostname.toLowerCase().replace(/^(m|mbasic|web)\.facebook\.com$/i, 'www.facebook.com');
-      url.pathname = url.pathname.replace(/\/+$/, '');
+
+      const pathname = url.pathname.replace(/\/{2,}/g, '/').replace(/\/+$/, '');
+      const groupPostMatch = pathname.match(/^\/groups\/([^/?#]+)\/(?:posts|permalink)\/([^/?#]+)$/i);
+      if (url.hostname === 'www.facebook.com' && groupPostMatch?.[1] && groupPostMatch?.[2]) {
+        const encodePart = value => {
+          try {
+            return encodeURIComponent(decodeURIComponent(value));
+          } catch {
+            return encodeURIComponent(value);
+          }
+        };
+        const groupId = encodePart(groupPostMatch[1]);
+        const postId = encodePart(groupPostMatch[2]);
+        return `https://www.facebook.com/groups/${groupId}/permalink/${postId}/`;
+      }
+
+      url.pathname = pathname;
       const drop = ['fbclid', 'mibextid', '__cft__', '__tn__', 'ref', 'refid', 'paipv'];
       drop.forEach(key => url.searchParams.delete(key));
       return url.toString();
@@ -142,12 +160,24 @@
     }
   }
 
+  function isGroupPermalinkUrl(value) {
+    try {
+      const url = new URL(String(value || '').trim());
+      const hostname = url.hostname.toLowerCase().replace(/^(m|mbasic|web)\.facebook\.com$/i, 'www.facebook.com');
+      const pathname = url.pathname.replace(/\/{2,}/g, '/').replace(/\/+$/, '');
+      return hostname === 'www.facebook.com'
+        && /^\/groups\/[^/?#]+\/permalink\/[^/?#]+$/i.test(pathname);
+    } catch {
+      return false;
+    }
+  }
+
   function uniqueLinks(lines) {
     const out = [];
     const seen = new Set();
     for (const line of lines) {
       const clean = normalizeUrl(line);
-      if (!clean || seen.has(clean)) continue;
+      if (!clean || !isGroupPermalinkUrl(clean) || seen.has(clean)) continue;
       seen.add(clean);
       out.push(clean);
     }
@@ -169,11 +199,21 @@
     return uniqueLinks(links).filter(link => !commented.has(normalizeUrl(link)));
   }
 
+  function updatePostLinkCounter(links = null) {
+    if (!B.fbPostLinkCounter) return;
+    const count = Array.isArray(links)
+      ? links.length
+      : filterNewLinks(parseLines(B.fbPostLinkInput?.value)).length;
+    B.fbPostLinkCounter.textContent = `${count} link`;
+  }
+
   function syncPostLinksInput() {
     if (!B.fbPostLinkInput) return;
-    const value = filterNewLinks(parseLines(B.fbPostLinkInput.value)).join('\n');
+    const links = filterNewLinks(parseLines(B.fbPostLinkInput.value));
+    const value = links.join('\n');
     if (B.fbPostLinkInput.value !== value) B.fbPostLinkInput.value = value;
     save(STORE.postLinks, value);
+    updatePostLinkCounter(links);
   }
 
   function setPostLinks(links) {
@@ -269,6 +309,7 @@
     addInputSave,
     parseLines,
     normalizeUrl,
+    isGroupPermalinkUrl,
     uniqueLinks,
     getPostLinks,
     setPostLinks,
@@ -277,6 +318,7 @@
     renderCommentedLinks,
     filterNewLinks,
     syncPostLinksInput,
+    updatePostLinkCounter,
     wirePostLinksInput,
     getExtensionId,
     getApifyToken,

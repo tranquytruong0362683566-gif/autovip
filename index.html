@@ -188,7 +188,10 @@
             <div class="form-group">
               <label for="fbPostLinkInput">Link bài viết Facebook</label>
               <textarea id="fbPostLinkInput" spellcheck="false" placeholder="Link mới sau khi quét sẽ tự đổ vào đây. Link đã comment trước sẽ tự bị loại."></textarea>
-              <div class="hint">Có thể dán link thủ công hoặc để Apify API tự đổ URL bài viết vào đây.</div>
+              <div class="field-status">
+                <span class="hint">Chỉ giữ URL nhóm Facebook dạng /permalink/.</span>
+                <span class="counter" id="fbPostLinkCounter">0 link</span>
+              </div>
             </div>
           </section>
 

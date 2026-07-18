@@ -33,10 +33,6 @@
     S.clearActiveReadTab();
   }
 
-  function scanModeNeedsGroup(mode) {
-    return mode === 'group_latest' || mode === 'group_top';
-  }
-
   function scanModeLabel(mode) {
     const labels = {
       group_latest: 'Bài viết mới',
@@ -52,14 +48,18 @@
     if (!groups.length) {
       S.setBridgeStatus('Hãy nhập UID hoặc link nhóm Facebook trước.', 'warn');
       B.fbGroupIdInput?.focus();
-      return [];
+      const error = new Error('Chưa nhập UID hoặc link nhóm Facebook.');
+      error.code = 'APIFY_GROUPS_EMPTY';
+      throw error;
     }
 
     const token = S.getApifyToken();
     if (!token) {
       S.setBridgeStatus('Hãy nhập Apify API token trong Cài đặt nâng cao.', 'warn');
       B.apifyApiTokenInput?.focus();
-      return [];
+      const error = new Error('Chưa nhập Apify API token trong Cài đặt nâng cao.');
+      error.code = 'APIFY_TOKEN_MISSING';
+      throw error;
     }
 
     const groupLimit = S.getGroupLimit();
@@ -98,54 +98,6 @@
     return links;
   }
 
-  async function scanGroupLinks({ autoStart = false } = {}) {
-    const groups = S.parseLines(B.fbGroupIdInput?.value);
-    const groupLimit = S.getGroupLimit();
-    const scanMode = S.getScanSourceMode();
-    const needGroups = scanModeNeedsGroup(scanMode);
-
-    if (needGroups && !groups.length) {
-      S.setBridgeStatus('Hãy nhập UID nhóm hoặc link nhóm trước.', 'warn');
-      B.fbGroupIdInput?.focus();
-      return [];
-    }
-
-    const modeLabel = scanModeLabel(scanMode);
-    const targetText = needGroups ? `mỗi nhóm lấy tối đa ${groupLimit} link` : `lấy tối đa ${groupLimit} link`;
-    S.setBridgeStatus(`Đang mở tab mới quét ${modeLabel}, ${targetText}...`, 'warn');
-    const response = await API.sendBridge(
-      ['SCAN_GROUP_PERMALINKS', 'SCAN_GROUP_LINKS', 'scanGroupLinks', 'SCAN_GROUP', 'scan_links', 'SCAN_LINKS'],
-      {
-        groups,
-        groupIds: groups,
-        scanMode,
-        sourceMode: scanMode,
-        feedMode: scanMode,
-        limit: groupLimit,
-        limitPerGroup: groupLimit,
-        perGroupLimit: groupLimit,
-        onlyPermalink: true,
-        newestFirst: scanMode === 'group_latest',
-        openInBackground: false,
-        active: true,
-        activateTab: true,
-        closeAfter: true
-      }
-    );
-
-    const links = S.filterNewLinks(API.extractLinksFromResponse(response));
-    S.setPostLinks(links);
-    const queuedLinks = S.getPostLinks();
-
-    if (queuedLinks.length) {
-      S.setBridgeStatus(`Đã lấy ${queuedLinks.length} link mới từ ${modeLabel}, đã lọc trùng link đã comment.`, 'ok');
-      if (autoStart) await autoWorkflow();
-    } else {
-      S.setBridgeStatus(`Không có link mới từ ${modeLabel} sau khi lọc trùng.`, 'warn');
-    }
-
-    return queuedLinks;
-  }
 
   async function readFirstFacebookPost() {
     const link = S.getPostLinks()[0];
@@ -345,7 +297,7 @@
     try {
       while (S.isClosedLoopRunning()) {
         S.setBridgeStatus(`Đang chạy vòng ${cycleIndex}...`, 'warn');
-        await scanGroupLinks({ autoStart: false });
+        await scanGroupLinksByApify();
         if (!S.isClosedLoopRunning()) break;
 
         const queuedLinks = S.getPostLinks();
@@ -436,7 +388,6 @@
 
   window.addEventListener('DOMContentLoaded', wireBridge);
   window.fbBridgeController = {
-    scanGroupLinks,
     scanGroupLinksByApify,
     runClosedGroupLoop,
     readFirstFacebookPost,

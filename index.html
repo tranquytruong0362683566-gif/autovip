@@ -85,7 +85,7 @@
                   <div class="form-group">
                     <label for="bridgeExtensionId">Extension ID</label>
                     <input type="text" id="bridgeExtensionId" placeholder="Dán ID extension Bridge ở đây">
-                    <div class="hint">Mở popup extension, copy ID rồi dán vào ô này để web GitHub gửi lệnh quét/đọc/comment sang Chrome Extension.</div>
+                    <div class="hint">Mở popup extension, copy ID rồi dán vào ô này để web gửi lệnh đọc bài viết và bình luận sang Chrome Extension. Việc lấy URL chỉ dùng Apify API.</div>
                   </div>
                 </div>
 
@@ -110,7 +110,7 @@
                       <option value="group_latest">Bài viết mới — https://www.facebook.com/groups/IDnhom/?sorting_setting=CHRONOLOGICAL</option>
                       <option value="group_top">Bài viết Top — https://www.facebook.com/groups/IDnhom/?sorting_setting=TOP_POSTS</option>
                     </select>
-                    <div class="hint">Bài viết mới và Bài viết Top dùng UID nhóm bên dưới để quét link. Nút Apify cũng dùng lựa chọn này để sắp xếp kết quả.</div>
+                    <div class="hint">Apify API dùng lựa chọn này để sắp xếp kết quả trả về: bài mới hoặc bài Top.</div>
                   </div>
                 </div>
 
@@ -158,24 +158,24 @@
             <div class="panel-heading">
               <div>
                 <h2 id="autoRunTitle">1. Chạy tự động từ nhóm Facebook</h2>
-                <p>Nhập UID hoặc link nhóm, rồi bấm chạy tự động. Các tuỳ chọn phụ đã gom vào Cài đặt nâng cao.</p>
+                <p>Nhập UID hoặc link nhóm, rồi bấm chạy tự động. Mỗi vòng sẽ gọi Apify API lấy URL trước khi xử lý bài viết.</p>
               </div>
-              <span class="counter">Quét → lọc trùng → comment</span>
+              <span class="counter">Apify API → lọc trùng → comment</span>
             </div>
 
             <div class="form-group">
               <label for="fbGroupIdInput">UID nhóm Facebook</label>
               <textarea id="fbGroupIdInput" spellcheck="false" placeholder="Nhập nhiều UID nhóm hoặc link nhóm, mỗi dòng một nhóm"></textarea>
-              <div class="hint">Chỉ cần nhập lần đầu. Mỗi lượt sẽ quét theo số link/nhóm bên dưới, tự lọc link đã comment trước đó rồi mới xử lý.</div>
+              <div class="hint">Chỉ cần nhập lần đầu. Mỗi lượt sẽ gọi Apify API, tự lọc link đã comment trước đó rồi mới xử lý.</div>
             </div>
 
             <div class="actions bridge-actions bridge-actions-main">
-              <button class="btn btn-warning" id="apifyScanBtn" type="button">🔗 Lấy URL bằng Apify</button>
-              <button class="btn btn-primary" id="scanGroupLinksBtn" type="button">🚀 Chạy tự động</button>
+              <button class="btn btn-warning" id="apifyScanBtn" type="button">🔗 Chỉ lấy URL bằng API</button>
+              <button class="btn btn-primary" id="scanGroupLinksBtn" type="button">🚀 Chạy tự động bằng API</button>
               <button class="btn btn-soft" id="autoWorkflowBtn" type="button">Chạy link hiện có</button>
               <button class="btn btn-danger hidden" id="stopClosedLoopBtn" type="button">⛔ Dừng</button>
             </div>
-            <div class="automation-status" id="bridgeStatus">Sẵn sàng kết nối extension.</div>
+            <div class="automation-status" id="bridgeStatus">Sẵn sàng. Chạy tự động sẽ lấy URL bằng Apify API.</div>
           </section>
 
           <section class="workflow-panel" aria-labelledby="linksTitle">
@@ -188,7 +188,7 @@
             <div class="form-group">
               <label for="fbPostLinkInput">Link bài viết Facebook</label>
               <textarea id="fbPostLinkInput" spellcheck="false" placeholder="Link mới sau khi quét sẽ tự đổ vào đây. Link đã comment trước sẽ tự bị loại."></textarea>
-              <div class="hint">Có thể dán link thủ công hoặc để chức năng quét nhóm tự đổ link vào đây.</div>
+              <div class="hint">Có thể dán link thủ công hoặc để Apify API tự đổ URL bài viết vào đây.</div>
             </div>
           </section>
 

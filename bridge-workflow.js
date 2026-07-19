@@ -263,6 +263,58 @@
     return labels[mode] || labels.group_latest;
   }
 
+  async function scanGroupLinksByExtension() {
+    const groups = S.parseLines(B.fbGroupIdInput?.value);
+    if (!groups.length) {
+      S.setBridgeStatus('Hãy nhập UID hoặc link nhóm Facebook trước.', 'warn');
+      B.fbGroupIdInput?.focus();
+      const error = new Error('Chưa nhập UID hoặc link nhóm Facebook.');
+      error.code = 'FACEBOOK_GROUPS_EMPTY';
+      throw error;
+    }
+
+    const groupLimit = S.getGroupLimit();
+    const scanMode = S.getScanSourceMode();
+    const modeLabel = scanModeLabel(scanMode);
+    S.setBridgeStatus(`Đang dùng bộ quét của autogpt-main để lấy ${modeLabel}, tối đa ${groupLimit} link mỗi nhóm...`, 'warn');
+
+    const response = await API.sendBridge(
+      ['SCAN_GROUP_PERMALINKS', 'SCAN_GROUP_LINKS', 'scanGroupLinks', 'SCAN_GROUP', 'scan_links', 'SCAN_LINKS'],
+      {
+        groups,
+        groupIds: groups,
+        scanMode,
+        sourceMode: scanMode,
+        feedMode: scanMode,
+        limit: groupLimit,
+        limitPerGroup: groupLimit,
+        perGroupLimit: groupLimit,
+        onlyPermalink: true,
+        newestFirst: scanMode === 'group_latest',
+        openInBackground: false,
+        active: true,
+        activateTab: true,
+        closeAfter: true
+      }
+    );
+
+    const links = S.filterNewLinks(API.extractLinksFromResponse(response));
+    const existingLinks = S.getPostLinks();
+    S.setPostLinks([...existingLinks, ...links]);
+    const queuedLinks = S.getPostLinks();
+
+    if (links.length) {
+      S.setBridgeStatus(
+        `Bộ quét Extension đã lấy ${links.length} link ${modeLabel} mới. Tổng hàng đợi hiện có ${queuedLinks.length} link.`,
+        'ok'
+      );
+    } else {
+      S.setBridgeStatus(`Bộ quét Extension không có link ${modeLabel} mới sau khi lọc trùng.`, 'warn');
+    }
+
+    return links;
+  }
+
   async function scanGroupLinksByApify() {
     if (!APIFY?.fetchPostUrls) throw new Error('Chưa nạp được module Apify API.');
 
@@ -320,6 +372,26 @@
     }
 
     return links;
+  }
+
+  async function scanGroupLinks({ preferApify = true } = {}) {
+    const token = S.getApifyToken();
+    if (preferApify && token) {
+      try {
+        return await scanGroupLinksByApify();
+      } catch (error) {
+        S.setBridgeStatus(
+          `Apify không lấy được URL (${error.message || error}). Đang chuyển sang bộ quét nhóm trực tiếp của autogpt-main...`,
+          'warn'
+        );
+        return await scanGroupLinksByExtension();
+      }
+    }
+
+    if (preferApify && !token) {
+      S.setBridgeStatus('Chưa có Apify token. Hệ thống chuyển sang bộ quét nhóm trực tiếp của autogpt-main...', 'warn');
+    }
+    return await scanGroupLinksByExtension();
   }
 
 
@@ -538,7 +610,7 @@
     try {
       while (S.isClosedLoopRunning()) {
         S.setBridgeStatus(`Đang chạy vòng ${cycleIndex}...`, 'warn');
-        await scanGroupLinksByApify();
+        await scanGroupLinks({ preferApify: true });
         if (!S.isClosedLoopRunning()) break;
 
         const queuedLinks = S.getPostLinks();
@@ -625,7 +697,7 @@
       if (!document.hidden) refreshFacebookAccount({ silent: true });
     }, 2000);
 
-    B.apifyScanBtn?.addEventListener('click', () => runBridgeTask(() => scanGroupLinksByApify()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
+    B.apifyScanBtn?.addEventListener('click', () => runBridgeTask(() => scanGroupLinks({ preferApify: true })).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
     B.scanGroupLinksBtn?.addEventListener('click', () => runBridgeTask(() => runClosedGroupLoop()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
     B.autoWorkflowBtn?.addEventListener('click', () => runBridgeTask(() => autoWorkflow()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
     B.commentCurrentTabBtn?.addEventListener('click', () => runBridgeTask(() => commentCurrentTab()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
@@ -650,6 +722,8 @@
 
   window.addEventListener('DOMContentLoaded', wireBridge);
   window.fbBridgeController = {
+    scanGroupLinks,
+    scanGroupLinksByExtension,
     scanGroupLinksByApify,
     runClosedGroupLoop,
     readFirstFacebookPost,

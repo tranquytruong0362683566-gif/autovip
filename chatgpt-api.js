@@ -1139,13 +1139,13 @@ Chỉ trả về nội dung bình luận.`;
         key: 'left',
         listEl: $('#tplListLeft'),
         storageKey: APP.storage.leftTemplates,
-        label: 'Kho mẫu trái'
+        label: 'Nhóm mẫu A'
       });
       state.managers.right = createTemplateManager({
         key: 'right',
         listEl: $('#tplList'),
         storageKey: APP.storage.rightTemplates,
-        label: 'Kho mẫu phải'
+        label: 'Nhóm mẫu B'
       });
 
       restoreApiSettings();

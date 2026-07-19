@@ -1,10 +1,20 @@
-AUTOVIP — DARK GREEN GRID v1.0.3
+AUTOVIP WEB — GIAO DIỆN INCOKIT + TỰ LIÊN KẾT EXTENSION v1.0.5
 
 1. Giải nén file ZIP.
-2. Tải TẤT CẢ file bên trong ZIP lên đúng thư mục đang chứa index.html của GitHub Pages.
-3. Không tải cả một thư mục cha lồng vào bên trong /auto/.
-4. Xác nhận index.html và incokit-dark-v1.0.3.css nằm cùng cấp.
-5. Mở trang với ?v=20260720-103 rồi nhấn Ctrl + Shift + R.
+2. Tải TẤT CẢ file bên trong ZIP lên đúng thư mục /autovip/ đang chứa index.html trên GitHub Pages.
+3. Không tải cả thư mục cha lồng thêm một cấp.
+4. Ghi đè toàn bộ file cũ bằng toàn bộ file trong gói v1.0.5.
+5. Đảm bảo incokit-workflow-v1.0.5.css và incokit-ui-v1.0.5.js nằm cùng cấp với index.html.
+6. Cài hoặc Reload extension v1.9.9 tại chrome://extensions.
+7. Đóng tab Web Autovip cũ, mở lại:
+   https://tranquytruong0362683566-gif.github.io/autovip/?v=20260720-105
+8. Nhấn Ctrl + Shift + R một lần.
 
-File CSS đang được gọi:
-./incokit-dark-v1.0.3.css?v=20260720-103
+Web không còn ô Extension ID. Extension tự liên kết bằng content bridge chỉ trên đúng URL /autovip/.
+
+THAY ĐỔI v1.0.5:
+- Giao diện xanh đen theo phong cách Incokit, có nền lưới tương tác theo chuột.
+- Sắp xếp lại chức năng theo đúng trình tự: nguồn nhóm → hàng đợi → soạn bình luận → kết quả.
+- Gộp hai kho mẫu vào một khu vực chung.
+- Tách riêng link bình luận thành công và link bị AI loại bỏ.
+- Cả hai danh sách vẫn được dùng để lọc trùng ở lần quét tiếp theo.

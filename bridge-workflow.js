@@ -139,12 +139,6 @@
   async function refreshFacebookAccount({ silent = false } = {}) {
     if (facebookAccountRefreshPromise) return facebookAccountRefreshPromise;
 
-    const extensionId = S.getExtensionId();
-    if (!extensionId) {
-      renderFacebookAccount({ message: 'Chưa nhập Extension ID.', error: true });
-      return null;
-    }
-
     facebookAccountRefreshPromise = (async () => {
       try {
         if (!silent) renderFacebookAccount({ message: 'Đang lấy UID từ Extension...' });
@@ -163,7 +157,7 @@
         return { ...data, uid, loggedIn };
       } catch (error) {
         renderFacebookAccount({
-          message: `Không lấy được UID từ Extension: ${error.message || error}`,
+          message: `Không lấy được UID từ Extension tự liên kết: ${error.message || error}`,
           error: true
         });
         if (!silent) S.setBridgeStatus(error.message || String(error), 'error');
@@ -479,7 +473,7 @@
           if (isNextCommentResult(comment) || controller.isNextResult?.(comment)) {
             S.setBridgeStatus(`AI xác định link ${index + 1}/${queue.length} là bài người bán/cho thuê, đã bỏ qua và chuyển bài tiếp theo.`, 'warn');
             await closeActiveReadTabIfAny();
-            S.saveCommentedLink(link);
+            S.saveRemovedLink(link);
             S.setPostLinks(S.getPostLinks().filter(item => S.normalizeUrl(item) !== S.normalizeUrl(link)));
             continue;
           }
@@ -597,7 +591,6 @@
   }
 
   function wireBridge() {
-    S.addInputSave(B.extensionId, S.STORE.extensionId);
     S.addInputSave(B.facebookCookiesInput, S.STORE.facebookCookies);
     S.addInputSave(B.apifyActorIdInput, S.STORE.apifyActorId);
     S.getApifyActorId();
@@ -618,12 +611,11 @@
     S.getLoopPauseSeconds();
     S.getLinkPauseSeconds();
     S.renderCommentedLinks();
+    S.renderRemovedLinks();
 
     B.facebookLogoutBtn?.addEventListener('click', () => {
       logoutFacebookAccount().catch(() => {});
     });
-    B.extensionId?.addEventListener('change', () => refreshFacebookAccount({ silent: true }));
-    B.extensionId?.addEventListener('blur', () => refreshFacebookAccount({ silent: true }));
     window.addEventListener('focus', () => refreshFacebookAccount({ silent: true }));
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) refreshFacebookAccount({ silent: true });
@@ -643,10 +635,16 @@
       S.setBridgeStatus('Đã dừng vòng lặp.', 'warn');
     });
     B.clearCommentedLinksBtn?.addEventListener('click', () => {
-      if (!confirm('Xoá toàn bộ log link đã comment?')) return;
+      if (!confirm('Xoá toàn bộ danh sách link đã bình luận thành công?')) return;
       S.save(S.STORE.commented, []);
       S.renderCommentedLinks();
-      S.setBridgeStatus('Đã xoá log link đã comment.', 'ok');
+      S.setBridgeStatus('Đã xoá danh sách link đã bình luận thành công.', 'ok');
+    });
+    B.clearRemovedLinksBtn?.addEventListener('click', () => {
+      if (!confirm('Xoá toàn bộ danh sách link đã loại bỏ?')) return;
+      S.save(S.STORE.removed, []);
+      S.renderRemovedLinks();
+      S.setBridgeStatus('Đã xoá danh sách link đã loại bỏ.', 'ok');
     });
   }
 

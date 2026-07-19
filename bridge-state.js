@@ -4,7 +4,6 @@
   const $ = (selector, root = document) => root.querySelector(selector);
 
   const B = {
-    extensionId: $('#bridgeExtensionId'),
     facebookAccountBar: $('#facebookAccountBar'),
     facebookUidDisplay: $('#facebookUidDisplay'),
     facebookLogoutBtn: $('#facebookLogoutBtn'),
@@ -33,11 +32,13 @@
     closeAfterComment: $('#closeAfterComment'),
     clearCommentedLinksBtn: $('#clearCommentedLinksBtn'),
     commentedLinksBox: $('#commentedLinksBox'),
-    commentedCountStat: $('#commentedCountStat')
+    commentedCountStat: $('#commentedCountStat'),
+    clearRemovedLinksBtn: $('#clearRemovedLinksBtn'),
+    removedLinksBox: $('#removedLinksBox'),
+    removedCountStat: $('#removedCountStat')
   };
 
   const STORE = {
-    extensionId: 'truong_fb_bridge_extension_id_v1',
     facebookCookies: 'truong_fb_bridge_facebook_cookies_v1',
     apifyActorId: 'truong_fb_bridge_apify_actor_id_v1',
     apifyToken: 'truong_fb_bridge_apify_token_v1',
@@ -48,7 +49,8 @@
     oldLoopPauseMinutes: 'truong_fb_bridge_loop_pause_minutes_v1',
     linkPauseSeconds: 'truong_fb_bridge_link_pause_seconds_v1',
     postLinks: 'truong_fb_bridge_post_links_v1',
-    commented: 'truong_fb_bridge_commented_links_v1'
+    commented: 'truong_fb_bridge_commented_links_v1',
+    removed: 'truong_fb_bridge_removed_links_v1'
   };
 
   const bridgeState = {
@@ -57,6 +59,8 @@
     activeReadLink: '',
     bridgeBusy: false
   };
+
+  try { localStorage.removeItem('truong_fb_bridge_extension_id_v1'); } catch {}
 
   function save(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
@@ -201,9 +205,22 @@
     if (B.commentedCountStat) B.commentedCountStat.textContent = String(list.length);
   }
 
+  function getRemovedLinks() {
+    return uniqueLinks(load(STORE.removed, []));
+  }
+
+  function renderRemovedLinks() {
+    const list = getRemovedLinks();
+    if (B.removedLinksBox) B.removedLinksBox.value = list.join('\n');
+    if (B.removedCountStat) B.removedCountStat.textContent = String(list.length);
+  }
+
   function filterNewLinks(links) {
-    const commented = new Set(getCommentedLinks().map(normalizeUrl));
-    return uniqueLinks(links).filter(link => !commented.has(normalizeUrl(link)));
+    const processed = new Set([
+      ...getCommentedLinks(),
+      ...getRemovedLinks()
+    ].map(normalizeUrl));
+    return uniqueLinks(links).filter(link => !processed.has(normalizeUrl(link)));
   }
 
   function updatePostLinkCounter(links = null) {
@@ -243,17 +260,20 @@
     syncPostLinksInput();
   }
 
+  function saveRemovedLink(link) {
+    const list = getRemovedLinks();
+    const clean = normalizeUrl(link);
+    if (clean && !list.includes(clean)) list.unshift(clean);
+    save(STORE.removed, list);
+    renderRemovedLinks();
+    syncPostLinksInput();
+  }
+
   function wirePostLinksInput() {
     if (!B.fbPostLinkInput) return;
     B.fbPostLinkInput.value = load(STORE.postLinks, '') || '';
     syncPostLinksInput();
     B.fbPostLinkInput.addEventListener('input', syncPostLinksInput);
-  }
-
-  function getExtensionId() {
-    const id = text(B.extensionId?.value);
-    if (id) save(STORE.extensionId, id);
-    return id;
   }
 
   function getApifyActorId() {
@@ -331,11 +351,13 @@
     getCommentedLinks,
     saveCommentedLink,
     renderCommentedLinks,
+    getRemovedLinks,
+    saveRemovedLink,
+    renderRemovedLinks,
     filterNewLinks,
     syncPostLinksInput,
     updatePostLinkCounter,
     wirePostLinksInput,
-    getExtensionId,
     getApifyActorId,
     getApifyToken,
     delay,

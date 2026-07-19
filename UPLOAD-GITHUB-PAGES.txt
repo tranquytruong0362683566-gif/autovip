@@ -1,0 +1,14 @@
+CÁCH CẬP NHẬT GITHUB PAGES
+
+1. Mở repository đang phục vụ đường dẫn /auto/.
+2. Vào đúng thư mục gốc đang chứa index.html hiện tại.
+3. Xóa hoặc ghi đè các file cũ bằng TOÀN BỘ file trong gói này.
+4. Không tải nguyên một thư mục autovip-main vào bên trong thư mục gốc.
+5. Sau khi commit, mở trang với tham số:
+   https://TEN-MIEN/auto/?v=20260720-102
+6. Nhấn Ctrl + Shift + R một lần.
+
+index.html đã chuyển sang tải:
+./incokit-style-v1.0.2.css?v=20260720-102
+
+style.css vẫn được giữ lại để tương thích, nhưng index.html không dùng file đó nữa.

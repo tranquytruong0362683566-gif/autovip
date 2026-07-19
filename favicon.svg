@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Robot head">
+  <defs>
+    <linearGradient id="bg" x1="18" y1="12" x2="110" y2="118" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffb24a"/>
+      <stop offset="0.52" stop-color="#ff7a1a"/>
+      <stop offset="1" stop-color="#f05400"/>
+    </linearGradient>
+    <linearGradient id="face" x1="36" y1="42" x2="94" y2="98" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fffaf2"/>
+      <stop offset="1" stop-color="#ffe6c6"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="7" stdDeviation="7" flood-color="#281a10" flood-opacity=".24"/>
+    </filter>
+  </defs>
+  <rect width="128" height="128" rx="30" fill="url(#bg)"/>
+  <path d="M64 19v14" stroke="#171411" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="64" cy="15" r="8" fill="#171411"/>
+  <g filter="url(#shadow)">
+    <rect x="24" y="34" width="80" height="72" rx="24" fill="#171411"/>
+    <rect x="32" y="42" width="64" height="56" rx="18" fill="url(#face)"/>
+  </g>
+  <rect x="16" y="58" width="13" height="29" rx="6.5" fill="#171411"/>
+  <rect x="99" y="58" width="13" height="29" rx="6.5" fill="#171411"/>
+  <circle cx="49" cy="68" r="8" fill="#171411"/>
+  <circle cx="79" cy="68" r="8" fill="#171411"/>
+  <circle cx="46.5" cy="65.5" r="2.5" fill="#fff" opacity=".9"/>
+  <circle cx="76.5" cy="65.5" r="2.5" fill="#fff" opacity=".9"/>
+  <path d="M47 84c5 5 11 7 17 7s12-2 17-7" fill="none" stroke="#171411" stroke-width="6" stroke-linecap="round"/>
+  <path d="M41 50h46" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".42"/>
+</svg>

@@ -1,14 +1,10 @@
-CÁCH CẬP NHẬT GITHUB PAGES
+AUTOVIP — DARK GREEN GRID v1.0.3
 
-1. Mở repository đang phục vụ đường dẫn /auto/.
-2. Vào đúng thư mục gốc đang chứa index.html hiện tại.
-3. Xóa hoặc ghi đè các file cũ bằng TOÀN BỘ file trong gói này.
-4. Không tải nguyên một thư mục autovip-main vào bên trong thư mục gốc.
-5. Sau khi commit, mở trang với tham số:
-   https://TEN-MIEN/auto/?v=20260720-102
-6. Nhấn Ctrl + Shift + R một lần.
+1. Giải nén file ZIP.
+2. Tải TẤT CẢ file bên trong ZIP lên đúng thư mục đang chứa index.html của GitHub Pages.
+3. Không tải cả một thư mục cha lồng vào bên trong /auto/.
+4. Xác nhận index.html và incokit-dark-v1.0.3.css nằm cùng cấp.
+5. Mở trang với ?v=20260720-103 rồi nhấn Ctrl + Shift + R.
 
-index.html đã chuyển sang tải:
-./incokit-style-v1.0.2.css?v=20260720-102
-
-style.css vẫn được giữ lại để tương thích, nhưng index.html không dùng file đó nữa.
+File CSS đang được gọi:
+./incokit-dark-v1.0.3.css?v=20260720-103

@@ -350,8 +350,7 @@
 
     const filtered = S.filterLinksAgainstHistory(API.extractLinksFromResponse(response));
     const links = filtered.links;
-    const existingLinks = S.getPostLinks();
-    S.setPostLinks([...existingLinks, ...links]);
+    S.setPostLinks(links);
     const queuedLinks = S.getPostLinks();
     const historyText = filtered.duplicateHistoryCount
       ? ` Đã xóa ${filtered.duplicateHistoryCount} link trùng lịch sử (${filtered.duplicateCommented.length} đã bình luận, ${filtered.duplicateRemoved.length} đã loại bỏ).`
@@ -394,9 +393,13 @@
     const groupLimit = S.getGroupLimit();
     const scanMode = S.getScanSourceMode();
     const modeLabel = scanModeLabel(scanMode);
-    const expectedMax = Math.min(1024, groupLimit * groups.length);
+    const normalizedGroups = [...new Set(groups.map(group => APIFY.normalizeGroupUrl(group)).filter(Boolean))];
+    const expectedMax = groupLimit * normalizedGroups.length;
 
-    S.setBridgeStatus(`Đang gọi Actor ${actorId} lấy URL ${modeLabel}, tối đa ${expectedMax} kết quả...`, 'warn');
+    S.setBridgeStatus(
+      `Đang gọi Actor ${actorId} theo ${normalizedGroups.length} lượt độc lập, chỉ lấy ${modeLabel}, tối đa ${groupLimit} link mỗi nhóm (${expectedMax} link)...`,
+      'warn'
+    );
 
     const result = await APIFY.fetchPostUrls({
       actorId,
@@ -408,8 +411,7 @@
 
     const filtered = S.filterLinksAgainstHistory(result.links);
     const links = filtered.links;
-    const existingLinks = S.getPostLinks();
-    S.setPostLinks([...existingLinks, ...links]);
+    S.setPostLinks(links);
     const queuedLinks = S.getPostLinks();
     const historyText = filtered.duplicateHistoryCount
       ? ` Đã xóa ${filtered.duplicateHistoryCount} link trùng lịch sử (${filtered.duplicateCommented.length} đã bình luận, ${filtered.duplicateRemoved.length} đã loại bỏ).`
@@ -417,7 +419,7 @@
 
     if (links.length) {
       S.setBridgeStatus(
-        `Apify trả về ${result.itemCount} bản ghi, còn ${links.length} URL /permalink/ không trùng và đã hiển thị trong ô Link bài viết Facebook.${historyText} Tổng hàng đợi hiện có ${queuedLinks.length} link.`,
+        `Apify đã quét riêng ${result.groupResults.length} nhóm theo nguồn ${modeLabel}, nhận ${result.itemCount} bản ghi và giữ ${links.length} URL /permalink/ không trùng.${historyText} Hàng đợi mới đã thay thế kết quả vòng trước và hiện có ${queuedLinks.length} link.`,
         'ok'
       );
     } else if (result.itemCount > 0) {

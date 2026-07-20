@@ -215,31 +215,22 @@
     return `Apify trả về HTTP ${status}.`;
   }
 
-  async function fetchPostUrls(options = {}) {
-    const actorId = normalizeActorId(options.actorId);
-    const token = text(options.token);
-    if (!token) {
-      const error = new Error('Chưa nhập Apify API token.');
-      error.code = 'APIFY_TOKEN_MISSING';
-      throw error;
-    }
+  function extractItems(payload) {
+    return Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.data?.items)
+        ? payload.data.items
+        : Array.isArray(payload?.items)
+          ? payload.items
+          : [];
+  }
 
-    const rawGroups = Array.isArray(options.groups) ? options.groups : [];
-    const groupUrls = [...new Set(rawGroups.map(normalizeGroupUrl).filter(Boolean))];
-    if (!groupUrls.length) {
-      const error = new Error('Không có UID hoặc link nhóm Facebook công khai hợp lệ.');
-      error.code = 'APIFY_GROUPS_EMPTY';
-      throw error;
-    }
-
-    const perGroupLimit = Math.max(1, Math.min(50, Math.round(Number(options.limit) || 5)));
-    const maxResults = Math.max(1, Math.min(1024, perGroupLimit * groupUrls.length));
-    const sortBy = resolveSortBy(options.scanMode);
-
+  async function fetchGroupPostUrls({ actorId, token, groupUrl, perGroupLimit, sortBy }) {
     const endpoint = new URL(`${API_BASE_URL}/actors/${encodeURIComponent(actorId)}/run-sync-get-dataset-items`);
     endpoint.searchParams.set('format', 'json');
     endpoint.searchParams.set('clean', 'true');
     endpoint.searchParams.set('timeout', '300');
+    endpoint.searchParams.set('limit', String(perGroupLimit));
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -253,8 +244,8 @@
           Accept: 'application/json'
         },
         body: JSON.stringify({
-          startUrls: groupUrls.map(url => ({ url })),
-          maxResults,
+          startUrls: [{ url: groupUrl }],
+          maxResults: perGroupLimit,
           sortBy
         }),
         signal: controller.signal
@@ -273,37 +264,88 @@
         error.code = `APIFY_HTTP_${response.status}`;
         error.status = response.status;
         error.data = payload;
+        error.groupUrl = groupUrl;
         throw error;
       }
 
-      const items = Array.isArray(payload)
-        ? payload
-        : Array.isArray(payload?.data?.items)
-          ? payload.data.items
-          : Array.isArray(payload?.items)
-            ? payload.items
-            : [];
+      const items = extractItems(payload).slice(0, perGroupLimit);
+      const links = extractPostUrls(items).slice(0, perGroupLimit);
 
       return {
-        actorId,
-        groupUrls,
-        perGroupLimit,
-        maxResults,
-        sortBy,
+        groupUrl,
         itemCount: items.length,
-        links: extractPostUrls(items),
+        links,
         items
       };
     } catch (error) {
       if (error?.name === 'AbortError') {
-        const timeoutError = new Error('Hết thời gian chờ Apify sau 295 giây.');
+        const timeoutError = new Error(`Hết thời gian chờ Apify sau 295 giây cho nhóm ${groupUrl}.`);
         timeoutError.code = 'APIFY_TIMEOUT';
+        timeoutError.groupUrl = groupUrl;
         throw timeoutError;
       }
       throw error;
     } finally {
       clearTimeout(timeoutId);
     }
+  }
+
+  async function fetchPostUrls(options = {}) {
+    const actorId = normalizeActorId(options.actorId);
+    const token = text(options.token);
+    if (!token) {
+      const error = new Error('Chưa nhập Apify API token.');
+      error.code = 'APIFY_TOKEN_MISSING';
+      throw error;
+    }
+
+    const rawGroups = Array.isArray(options.groups) ? options.groups : [];
+    const groupUrls = [...new Set(rawGroups.map(normalizeGroupUrl).filter(Boolean))];
+    if (!groupUrls.length) {
+      const error = new Error('Không có UID hoặc link nhóm Facebook công khai hợp lệ.');
+      error.code = 'APIFY_GROUPS_EMPTY';
+      throw error;
+    }
+
+    const perGroupLimit = Math.max(1, Math.min(50, Math.round(Number(options.limit) || 5)));
+    const maxResults = Math.max(1, perGroupLimit * groupUrls.length);
+    const sortBy = resolveSortBy(options.scanMode);
+
+    const groupResults = [];
+    const items = [];
+    const links = [];
+    const seenLinks = new Set();
+
+    for (const groupUrl of groupUrls) {
+      const groupResult = await fetchGroupPostUrls({
+        actorId,
+        token,
+        groupUrl,
+        perGroupLimit,
+        sortBy
+      });
+
+      groupResults.push(groupResult);
+      items.push(...groupResult.items);
+
+      for (const link of groupResult.links) {
+        if (seenLinks.has(link)) continue;
+        seenLinks.add(link);
+        links.push(link);
+      }
+    }
+
+    return {
+      actorId,
+      groupUrls,
+      perGroupLimit,
+      maxResults,
+      sortBy,
+      itemCount: items.length,
+      links,
+      items,
+      groupResults
+    };
   }
 
   window.apifyGroupsApi = {

@@ -46,6 +46,7 @@
     oldLoopPauseMinutes: 'truong_fb_bridge_loop_pause_minutes_v1',
     linkPauseSeconds: 'truong_fb_bridge_link_pause_seconds_v1',
     postLinks: 'truong_fb_bridge_post_links_v1',
+    postCaptions: 'truong_fb_bridge_post_captions_v1',
     commented: 'truong_fb_bridge_commented_links_v1',
     removed: 'truong_fb_bridge_removed_links_v1'
   };
@@ -252,6 +253,53 @@
     return filterLinksAgainstHistory(links).links;
   }
 
+  function getPostCaptionMap() {
+    const stored = load(STORE.postCaptions, {});
+    if (!stored || Array.isArray(stored) || typeof stored !== 'object') return {};
+    const captions = {};
+    for (const [url, caption] of Object.entries(stored)) {
+      const key = normalizeUrl(url);
+      const value = text(caption);
+      if (key && value) captions[key] = value;
+    }
+    return captions;
+  }
+
+  function setPostCaptions(records) {
+    const captions = {};
+    for (const record of Array.isArray(records) ? records : []) {
+      const key = normalizeUrl(record?.url || record?.link);
+      const caption = text(record?.caption);
+      if (!key || !caption) continue;
+      captions[key] = caption;
+    }
+    save(STORE.postCaptions, captions);
+    return Object.keys(captions).length;
+  }
+
+  function getPostCaption(link) {
+    return getPostCaptionMap()[normalizeUrl(link)] || '';
+  }
+
+  function removePostCaption(link) {
+    const captions = getPostCaptionMap();
+    const key = normalizeUrl(link);
+    if (!key || !Object.prototype.hasOwnProperty.call(captions, key)) return;
+    delete captions[key];
+    save(STORE.postCaptions, captions);
+  }
+
+  function prunePostCaptions(links) {
+    const allowed = new Set(uniqueLinks(Array.isArray(links) ? links : parseLines(links)).map(normalizeUrl));
+    const captions = getPostCaptionMap();
+    const nextCaptions = {};
+    for (const [url, caption] of Object.entries(captions)) {
+      if (allowed.has(normalizeUrl(url))) nextCaptions[url] = caption;
+    }
+    save(STORE.postCaptions, nextCaptions);
+    return Object.keys(nextCaptions).length;
+  }
+
   function updatePostLinkCounter(links = null) {
     if (!B.fbPostLinkCounter) return;
     const count = Array.isArray(links)
@@ -266,6 +314,7 @@
     const value = links.join('\n');
     if (B.fbPostLinkInput.value !== value) B.fbPostLinkInput.value = value;
     save(STORE.postLinks, value);
+    prunePostCaptions(links);
     updatePostLinkCounter(links);
   }
 
@@ -273,6 +322,7 @@
     if (!B.fbPostLinkInput) return;
     B.fbPostLinkInput.value = filterNewLinks(links).join('\n');
     save(STORE.postLinks, B.fbPostLinkInput.value);
+    prunePostCaptions(parseLines(B.fbPostLinkInput.value));
     B.fbPostLinkInput.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
@@ -284,6 +334,7 @@
     const list = getCommentedLinks();
     const clean = normalizeUrl(link);
     if (clean && !list.includes(clean)) list.unshift(clean);
+    removePostCaption(clean);
     save(STORE.commented, list);
     renderCommentedLinks();
     syncPostLinksInput();
@@ -293,6 +344,7 @@
     const list = getRemovedLinks();
     const clean = normalizeUrl(link);
     if (clean && !list.includes(clean)) list.unshift(clean);
+    removePostCaption(clean);
     save(STORE.removed, list);
     renderRemovedLinks();
     syncPostLinksInput();
@@ -408,6 +460,11 @@
     renderRemovedLinks,
     filterLinksAgainstHistory,
     filterNewLinks,
+    getPostCaptionMap,
+    setPostCaptions,
+    getPostCaption,
+    removePostCaption,
+    prunePostCaptions,
     syncPostLinksInput,
     updatePostLinkCounter,
     wirePostLinksInput,

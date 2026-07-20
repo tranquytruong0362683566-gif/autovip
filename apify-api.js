@@ -286,6 +286,14 @@
     return `https://www.facebook.com/groups/${cleanGroupId}/permalink/${cleanPostId}/`;
   }
 
+  function extractCaptionFromItem(item) {
+    return findFirstFieldString(item, [
+      'caption',
+      'post_caption',
+      'postCaption'
+    ]);
+  }
+
   function extractPostUrlFromItem(item) {
     if (typeof item === 'string') return normalizePostUrl(item);
     if (!item || typeof item !== 'object') return '';
@@ -320,7 +328,9 @@
     diagnostics.invalidPostUrlCount = 0;
     diagnostics.duplicatePostUrlCount = 0;
     diagnostics.reconstructedPostUrlCount = 0;
+    diagnostics.postRecords = [];
     const fallbackGroupId = extractGroupIdFromUrl(options?.groupUrl);
+    const recordByUrl = new Map();
 
     function addLink(value, item = null) {
       let link = normalizePostUrl(value);
@@ -348,10 +358,21 @@
       }
       if (seen.has(link)) {
         diagnostics.duplicatePostUrlCount += 1;
+        const existingRecord = recordByUrl.get(link);
+        const duplicateCaption = extractCaptionFromItem(item);
+        if (existingRecord && !existingRecord.caption && duplicateCaption) {
+          existingRecord.caption = duplicateCaption;
+        }
         return;
       }
       seen.add(link);
       links.push(link);
+      const record = {
+        url: link,
+        caption: extractCaptionFromItem(item)
+      };
+      recordByUrl.set(link, record);
+      diagnostics.postRecords.push(record);
     }
 
     // Luôn lấy toàn bộ giá trị của trường post_url/postUrl trong dataset trước.
@@ -466,6 +487,8 @@
         reconstructedPostUrlCount: diagnostics.reconstructedPostUrlCount,
         invalidPostUrlCount: diagnostics.invalidPostUrlCount,
         duplicatePostUrlCount: diagnostics.duplicatePostUrlCount,
+        captionCount: diagnostics.postRecords.filter(record => text(record.caption)).length,
+        posts: diagnostics.postRecords,
         links,
         items
       };
@@ -507,6 +530,7 @@
     const items = [];
     const links = [];
     const seenLinks = new Set();
+    const postByUrl = new Map();
 
     for (const groupUrl of groupUrls) {
       const groupResult = await fetchGroupPostUrls({
@@ -525,6 +549,15 @@
         seenLinks.add(link);
         links.push(link);
       }
+
+      for (const post of groupResult.posts || []) {
+        const existingPost = postByUrl.get(post.url);
+        if (!existingPost) {
+          postByUrl.set(post.url, { url: post.url, caption: text(post.caption) });
+        } else if (!existingPost.caption && text(post.caption)) {
+          existingPost.caption = text(post.caption);
+        }
+      }
     }
 
     return {
@@ -535,6 +568,7 @@
       sortBy,
       itemCount: items.length,
       links,
+      posts: [...postByUrl.values()],
       items,
       groupResults
     };
@@ -599,6 +633,7 @@
     normalizeGroupUrl,
     normalizePostUrl,
     extractPostUrlFieldValues,
+    extractCaptionFromItem,
     extractPostUrls,
     resolveSortBy,
     fetchPostUrls,

@@ -357,6 +357,7 @@
 
     const filtered = S.filterLinksAgainstHistory(API.extractLinksFromResponse(response));
     const links = filtered.links;
+    S.setPostCaptions([]);
     S.setPostLinks(links);
     const queuedLinks = S.getPostLinks();
     const historyText = filtered.duplicateHistoryCount
@@ -444,6 +445,9 @@
       0
     );
     const postUrlDetailText = ` Đã chuyển đổi ${reconstructedPostUrlCount} link định dạng khác; sai định dạng ${invalidPostUrlCount}; trùng trong kết quả Apify ${duplicatePostUrlCount}.`;
+    const acceptedLinkKeys = new Set(links.map(S.normalizeUrl));
+    const captionRecords = (result.posts || []).filter(post => acceptedLinkKeys.has(S.normalizeUrl(post.url)));
+    const savedCaptionCount = S.setPostCaptions(captionRecords);
     S.setPostLinks(links);
     const queuedLinks = S.getPostLinks();
     const historyText = filtered.duplicateHistoryCount
@@ -452,7 +456,7 @@
 
     if (links.length) {
       S.setBridgeStatus(
-        `Apify đã quét riêng ${result.groupResults.length} nhóm theo nguồn ${modeLabel}, nhận ${result.itemCount} bản ghi, đọc ${postUrlFieldCount} giá trị post_url và giữ ${links.length} URL /permalink/ không trùng.${postUrlDetailText}${historyText}${actorStatusText} Hàng đợi mới đã thay thế kết quả vòng trước và hiện có ${queuedLinks.length} link.`,
+        `Apify đã quét riêng ${result.groupResults.length} nhóm theo nguồn ${modeLabel}, nhận ${result.itemCount} bản ghi, đọc ${postUrlFieldCount} giá trị post_url và giữ ${links.length} URL /permalink/ không trùng. Đã ghép ${savedCaptionCount}/${links.length} caption với đúng link.${postUrlDetailText}${historyText}${actorStatusText} Hàng đợi mới đã thay thế kết quả vòng trước và hiện có ${queuedLinks.length} link.`,
         'ok'
       );
     } else if (result.itemCount > 0) {
@@ -488,8 +492,18 @@
   }
 
 
-  async function readFirstFacebookPost() {
-    const link = S.getPostLinks()[0];
+  function setArticleInputContent(article) {
+    const content = S.text(article);
+    if (!content) return '';
+    if (B.articleInput) {
+      B.articleInput.value = content;
+      B.articleInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    return content;
+  }
+
+  async function readFirstFacebookPost(targetLink = '') {
+    const link = targetLink || S.getPostLinks()[0];
     if (!link) {
       S.setBridgeStatus('Chưa có link bài viết Facebook để đọc.', 'warn');
       B.fbPostLinkInput?.focus();
@@ -520,13 +534,24 @@
     const article = API.extractArticleFromResponse(response);
     if (!article) throw new Error('Extension chưa trả về nội dung bài viết.');
 
-    if (B.articleInput) {
-      B.articleInput.value = article;
-      B.articleInput.dispatchEvent(new Event('input', { bubbles: true }));
-    }
+    setArticleInputContent(article);
 
     S.setBridgeStatus('Đã lấy description từ Rakko API và điền vào ô nội dung gốc.', 'ok');
     return article;
+  }
+
+  async function loadArticleForLink(link) {
+    const caption = S.getPostCaption(link);
+    if (caption) {
+      await closeActiveReadTabIfAny();
+      const article = setArticleInputContent(caption);
+      S.setBridgeStatus('Đã lấy caption từ dữ liệu Apify và điền vào ô Nội dung bài viết gốc; không gọi API đọc bài.', 'ok');
+      return { article, source: 'apify_caption' };
+    }
+
+    S.setBridgeStatus('Caption Apify của link này rỗng. Đang dùng API đọc bài cũ làm dự phòng...', 'warn');
+    const article = await readFirstFacebookPost(link);
+    return { article, source: 'read_api_fallback' };
   }
 
   async function commentToFacebook(link, comment) {
@@ -640,7 +665,7 @@
         try {
           S.setBridgeStatus(`Đang xử lý link ${index + 1}/${queue.length}...`, 'warn');
           S.setPostLinks([link, ...S.getPostLinks().filter(item => S.normalizeUrl(item) !== S.normalizeUrl(link))]);
-          await readFirstFacebookPost();
+          await loadArticleForLink(link);
 
           const controller = window.chatGPTApiController || {};
           if (!controller.generateComment) throw new Error('Chưa nạp được hàm gọi API ChatGPT.');
@@ -740,7 +765,7 @@
           continue;
         }
 
-        S.setBridgeStatus(`Vòng ${cycleIndex}: đã lọc xong link. Đang đọc description của link đầu tiên ngay...`, 'warn');
+        S.setBridgeStatus(`Vòng ${cycleIndex}: đã lọc xong link. Đang nạp caption Apify của link đầu tiên...`, 'warn');
         await autoWorkflow({ manageLoopState: false });
 
         if (!S.isClosedLoopRunning()) break;
@@ -845,6 +870,7 @@
     scanGroupLinksByApify,
     runClosedGroupLoop,
     readFirstFacebookPost,
+    loadArticleForLink,
     autoWorkflow,
     commentCurrentTab,
     refreshFacebookAccount,

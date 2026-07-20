@@ -230,7 +230,6 @@
     endpoint.searchParams.set('format', 'json');
     endpoint.searchParams.set('clean', 'true');
     endpoint.searchParams.set('timeout', '300');
-    endpoint.searchParams.set('limit', String(perGroupLimit));
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -268,8 +267,11 @@
         throw error;
       }
 
-      const items = extractItems(payload).slice(0, perGroupLimit);
-      const links = extractPostUrls(items).slice(0, perGroupLimit);
+      // perGroupLimit chỉ là số lượng yêu cầu gửi cho Actor qua maxResults.
+      // Actor có thể trả nhiều bản ghi hơn con số yêu cầu, vì vậy phải giữ toàn
+      // bộ dataset thực tế thay vì tiếp tục cắt ở query API hoặc phía trình duyệt.
+      const items = extractItems(payload);
+      const links = extractPostUrls(items);
 
       return {
         groupUrl,

@@ -401,10 +401,10 @@
     const scanMode = S.getScanSourceMode();
     const modeLabel = scanModeLabel(scanMode);
     const normalizedGroups = [...new Set(groups.map(group => APIFY.normalizeGroupUrl(group)).filter(Boolean))];
-    const expectedMax = groupLimit * normalizedGroups.length;
+    const requestedTotal = groupLimit * normalizedGroups.length;
 
     S.setBridgeStatus(
-      `Đang gọi Actor ${actorId} theo ${normalizedGroups.length} lượt độc lập, chỉ lấy ${modeLabel}, tối đa ${groupLimit} link mỗi nhóm (${expectedMax} link)...`,
+      `Đang gọi Actor ${actorId} theo ${normalizedGroups.length} lượt độc lập, yêu cầu ${groupLimit} bài mỗi nhóm (${requestedTotal} bài). Nếu Apify trả nhiều hơn, hệ thống sẽ giữ toàn bộ URL hợp lệ...`,
       'warn'
     );
 

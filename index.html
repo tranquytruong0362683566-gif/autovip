@@ -150,7 +150,11 @@
           <div class="advanced-title"><span aria-hidden="true">⌁</span> API Apify lấy bài viết</div>
           <div class="form-group">
             <label for="apifyActorIdInput">Apify Actor ID</label>
-            <input type="text" id="apifyActorIdInput" value="caprolok~facebook-groups-scraper" placeholder="Ví dụ: caprolok~facebook-groups-scraper" autocomplete="off" spellcheck="false">
+            <select id="apifyActorIdInput">
+              <option value="powerful_bachelor~facebook-group-scraper">powerful_bachelor/Facebook-Group-Scraper</option>
+              <option value="caprolok~facebook-groups-scraper" selected>caprolok/facebook-groups-scraper</option>
+            </select>
+            <div class="hint">Nếu Actor đang chọn bị lỗi hoặc không trả được post_url, hệ thống tự thử Actor còn lại và lưu Actor hoạt động cho lần chạy sau.</div>
           </div>
           <div class="form-group api-key-group">
             <label for="apifyApiTokenInput">Apify API token</label>
@@ -434,9 +438,9 @@
 
   <script src="incokit-ui-v1.0.5.js?v=20260720-113"></script>
   <script src="chatgpt-api.js?v=20260720-113"></script>
-  <script src="bridge-state.js?v=20260720-113"></script>
+  <script src="bridge-state.js?v=20260721-118"></script>
   <script src="bridge-api.js?v=20260720-113"></script>
-  <script src="apify-api.js?v=20260720-113"></script>
-  <script src="bridge-workflow.js?v=20260720-114"></script>
+  <script src="apify-api.js?v=20260721-118"></script>
+  <script src="bridge-workflow.js?v=20260721-118"></script>
 </body>
 </html>

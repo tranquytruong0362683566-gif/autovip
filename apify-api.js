@@ -1,6 +1,16 @@
 (function () {
   'use strict';
 
+  const SUPPORTED_ACTORS = Object.freeze([
+    Object.freeze({
+      id: 'powerful_bachelor~facebook-group-scraper',
+      label: 'powerful_bachelor/Facebook-Group-Scraper'
+    }),
+    Object.freeze({
+      id: 'caprolok~facebook-groups-scraper',
+      label: 'caprolok/facebook-groups-scraper'
+    })
+  ]);
   const DEFAULT_ACTOR_ID = 'caprolok~facebook-groups-scraper';
   const API_BASE_URL = 'https://api.apify.com/v2';
   const REQUEST_TIMEOUT_MS = 295000;
@@ -42,7 +52,29 @@
       throw error;
     }
 
-    return actorId;
+    const supportedActor = SUPPORTED_ACTORS.find(actor => actor.id.toLowerCase() === actorId.toLowerCase());
+    return supportedActor?.id || actorId;
+  }
+
+  function getActorLabel(value) {
+    const actorId = normalizeActorId(value);
+    return SUPPORTED_ACTORS.find(actor => actor.id === actorId)?.label || actorId.replace('~', '/');
+  }
+
+  function getActorCandidates(preferredActorId) {
+    let normalizedPreferred = '';
+    try {
+      normalizedPreferred = normalizeActorId(preferredActorId);
+    } catch {}
+
+    const preferred = SUPPORTED_ACTORS.some(actor => actor.id === normalizedPreferred)
+      ? normalizedPreferred
+      : DEFAULT_ACTOR_ID;
+
+    return [
+      preferred,
+      ...SUPPORTED_ACTORS.map(actor => actor.id).filter(actorId => actorId !== preferred)
+    ];
   }
 
   function normalizeFacebookHost(hostname) {
@@ -154,6 +186,55 @@
     }
   }
 
+  function collectStringValues(value, output, depth = 0) {
+    if (depth > 10 || value == null) return;
+
+    if (typeof value === 'string') {
+      const clean = text(value);
+      if (clean) output.push(clean);
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      for (const item of value) collectStringValues(item, output, depth + 1);
+      return;
+    }
+
+    if (typeof value !== 'object') return;
+    for (const nestedValue of Object.values(value)) {
+      collectStringValues(nestedValue, output, depth + 1);
+    }
+  }
+
+  function isPostUrlFieldName(key) {
+    return String(key || '').replace(/[^a-z0-9]/gi, '').toLowerCase() === 'posturl';
+  }
+
+  function extractPostUrlFieldValues(value) {
+    const output = [];
+
+    function visit(node, depth = 0) {
+      if (depth > 10 || node == null) return;
+
+      if (Array.isArray(node)) {
+        for (const item of node) visit(item, depth + 1);
+        return;
+      }
+
+      if (typeof node !== 'object') return;
+
+      for (const [key, nestedValue] of Object.entries(node)) {
+        if (isPostUrlFieldName(key)) {
+          collectStringValues(nestedValue, output);
+        }
+        visit(nestedValue, depth + 1);
+      }
+    }
+
+    visit(value);
+    return output;
+  }
+
   function extractPostUrlFromItem(item) {
     if (typeof item === 'string') return normalizePostUrl(item);
     if (!item || typeof item !== 'object') return '';
@@ -179,15 +260,27 @@
     return '';
   }
 
-  function extractPostUrls(items) {
+  function extractPostUrls(items, postUrlFieldValues = null) {
     const links = [];
     const seen = new Set();
 
-    for (const item of Array.isArray(items) ? items : []) {
-      const link = extractPostUrlFromItem(item);
-      if (!link || seen.has(link)) continue;
+    function addLink(value) {
+      const link = normalizePostUrl(value);
+      if (!link || seen.has(link)) return;
       seen.add(link);
       links.push(link);
+    }
+
+    // Luôn lấy toàn bộ giá trị của trường post_url/postUrl trong dataset trước.
+    // Không dừng ở URL đầu tiên và không giới hạn số URL theo số lượng yêu cầu.
+    const explicitPostUrls = Array.isArray(postUrlFieldValues)
+      ? postUrlFieldValues
+      : extractPostUrlFieldValues(items);
+    for (const value of explicitPostUrls) addLink(value);
+
+    for (const item of Array.isArray(items) ? items : []) {
+      // Fallback cho Actor dùng tên trường URL khác post_url.
+      addLink(extractPostUrlFromItem(item));
     }
 
     return links;
@@ -271,11 +364,13 @@
       // Actor có thể trả nhiều bản ghi hơn con số yêu cầu, vì vậy phải giữ toàn
       // bộ dataset thực tế thay vì tiếp tục cắt ở query API hoặc phía trình duyệt.
       const items = extractItems(payload);
-      const links = extractPostUrls(items);
+      const postUrlFieldValues = extractPostUrlFieldValues(items);
+      const links = extractPostUrls(items, postUrlFieldValues);
 
       return {
         groupUrl,
         itemCount: items.length,
+        postUrlFieldCount: postUrlFieldValues.length,
         links,
         items
       };
@@ -350,13 +445,68 @@
     };
   }
 
+  async function fetchPostUrlsWithFallback(options = {}) {
+    const actorCandidates = getActorCandidates(options.actorId);
+    const actorErrors = [];
+
+    for (let index = 0; index < actorCandidates.length; index += 1) {
+      const actorId = actorCandidates[index];
+      if (typeof options.onActorAttempt === 'function') {
+        await options.onActorAttempt({
+          actorId,
+          actorLabel: getActorLabel(actorId),
+          attempt: index + 1,
+          total: actorCandidates.length,
+          previousError: actorErrors.at(-1)?.error || null
+        });
+      }
+
+      try {
+        const result = await fetchPostUrls({ ...options, actorId });
+        if (!result.links.length) {
+          const error = new Error(
+            result.itemCount > 0
+              ? `Actor ${getActorLabel(actorId)} trả ${result.itemCount} bản ghi nhưng không có post_url hợp lệ.`
+              : `Actor ${getActorLabel(actorId)} không trả về bản ghi nào.`
+          );
+          error.code = 'APIFY_ACTOR_NO_POST_URLS';
+          error.actorId = actorId;
+          error.result = result;
+          throw error;
+        }
+
+        return {
+          ...result,
+          preferredActorId: actorCandidates[0],
+          switchedActor: actorId !== actorCandidates[0],
+          actorErrors
+        };
+      } catch (error) {
+        actorErrors.push({ actorId, error });
+      }
+    }
+
+    const summary = actorErrors
+      .map(({ actorId, error }) => `${getActorLabel(actorId)}: ${error?.message || error}`)
+      .join(' | ');
+    const error = new Error(`Cả hai Apify Actor đều không lấy được link. ${summary}`);
+    error.code = 'APIFY_ALL_ACTORS_FAILED';
+    error.actorErrors = actorErrors;
+    throw error;
+  }
+
   window.apifyGroupsApi = {
+    SUPPORTED_ACTORS,
     DEFAULT_ACTOR_ID,
     normalizeActorId,
+    getActorLabel,
+    getActorCandidates,
     normalizeGroupUrl,
     normalizePostUrl,
+    extractPostUrlFieldValues,
     extractPostUrls,
     resolveSortBy,
-    fetchPostUrls
+    fetchPostUrls,
+    fetchPostUrlsWithFallback
   };
 }());

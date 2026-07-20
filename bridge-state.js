@@ -50,6 +50,12 @@
     removed: 'truong_fb_bridge_removed_links_v1'
   };
 
+  const APIFY_ACTOR_IDS = [
+    'powerful_bachelor~facebook-group-scraper',
+    'caprolok~facebook-groups-scraper'
+  ];
+  const DEFAULT_APIFY_ACTOR_ID = 'caprolok~facebook-groups-scraper';
+
   const bridgeState = {
     closedLoopRunning: false,
     activeReadTabId: null,
@@ -299,12 +305,35 @@
     B.fbPostLinkInput.addEventListener('input', syncPostLinksInput);
   }
 
-  function getApifyActorId() {
-    const defaultActorId = 'caprolok~facebook-groups-scraper';
-    const actorId = text(B.apifyActorIdInput?.value) || defaultActorId;
+  function normalizeSupportedApifyActorId(value) {
+    const candidate = text(value)
+      .replace(/^https?:\/\/(?:console\.)?apify\.com\/actors\//i, '')
+      .replace(/^\/+|\/+$/g, '')
+      .replace('/', '~')
+      .toLowerCase();
+    return APIFY_ACTOR_IDS.find(actorId => actorId.toLowerCase() === candidate) || '';
+  }
+
+  function setApifyActorId(value) {
+    const actorId = normalizeSupportedApifyActorId(value) || DEFAULT_APIFY_ACTOR_ID;
     if (B.apifyActorIdInput) B.apifyActorIdInput.value = actorId;
     save(STORE.apifyActorId, actorId);
     return actorId;
+  }
+
+  function getApifyActorId() {
+    const currentValue = text(B.apifyActorIdInput?.value);
+    const savedValue = load(STORE.apifyActorId, '');
+    return setApifyActorId(currentValue || savedValue || DEFAULT_APIFY_ACTOR_ID);
+  }
+
+  function wireApifyActorIdInput() {
+    if (!B.apifyActorIdInput) return;
+    const savedValue = load(STORE.apifyActorId, '');
+    setApifyActorId(savedValue || B.apifyActorIdInput.value || DEFAULT_APIFY_ACTOR_ID);
+    B.apifyActorIdInput.addEventListener('change', () => {
+      setApifyActorId(B.apifyActorIdInput.value);
+    });
   }
 
   function getApifyToken() {
@@ -382,7 +411,10 @@
     syncPostLinksInput,
     updatePostLinkCounter,
     wirePostLinksInput,
+    APIFY_ACTOR_IDS,
+    setApifyActorId,
     getApifyActorId,
+    wireApifyActorIdInput,
     getApifyToken,
     delay,
     setClosedLoopRunning,

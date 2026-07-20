@@ -403,21 +403,34 @@
     const normalizedGroups = [...new Set(groups.map(group => APIFY.normalizeGroupUrl(group)).filter(Boolean))];
     const requestedTotal = groupLimit * normalizedGroups.length;
 
-    S.setBridgeStatus(
-      `Đang gọi Actor ${actorId} theo ${normalizedGroups.length} lượt độc lập, yêu cầu ${groupLimit} bài mỗi nhóm (${requestedTotal} bài). Nếu Apify trả nhiều hơn, hệ thống sẽ giữ toàn bộ URL hợp lệ...`,
-      'warn'
-    );
-
-    const result = await APIFY.fetchPostUrls({
+    const result = await APIFY.fetchPostUrlsWithFallback({
       actorId,
       token,
       groups,
       limit: groupLimit,
-      scanMode
+      scanMode,
+      onActorAttempt: ({ actorLabel, attempt, total, previousError }) => {
+        const retryText = previousError
+          ? ` Actor trước bị lỗi: ${previousError.message || previousError}. Đang tự chuyển Actor...`
+          : '';
+        S.setBridgeStatus(
+          `${retryText} Đang gọi ${actorLabel} (${attempt}/${total}) theo ${normalizedGroups.length} lượt độc lập, yêu cầu ${groupLimit} bài mỗi nhóm (${requestedTotal} bài).`,
+          'warn'
+        );
+      }
     });
+    const workingActorId = S.setApifyActorId(result.actorId);
+    const workingActorLabel = APIFY.getActorLabel(workingActorId);
+    const actorStatusText = result.switchedActor
+      ? ` Đã tự chuyển sang ${workingActorLabel} và lưu làm Actor mặc định cho lần chạy sau.`
+      : ` Actor ${workingActorLabel} hoạt động và đã được lưu cho lần chạy sau.`;
 
     const filtered = S.filterLinksAgainstHistory(result.links);
     const links = filtered.links;
+    const postUrlFieldCount = result.groupResults.reduce(
+      (total, groupResult) => total + (Number(groupResult.postUrlFieldCount) || 0),
+      0
+    );
     S.setPostLinks(links);
     const queuedLinks = S.getPostLinks();
     const historyText = filtered.duplicateHistoryCount
@@ -426,12 +439,12 @@
 
     if (links.length) {
       S.setBridgeStatus(
-        `Apify đã quét riêng ${result.groupResults.length} nhóm theo nguồn ${modeLabel}, nhận ${result.itemCount} bản ghi và giữ ${links.length} URL /permalink/ không trùng.${historyText} Hàng đợi mới đã thay thế kết quả vòng trước và hiện có ${queuedLinks.length} link.`,
+        `Apify đã quét riêng ${result.groupResults.length} nhóm theo nguồn ${modeLabel}, nhận ${result.itemCount} bản ghi, đọc ${postUrlFieldCount} giá trị post_url và giữ ${links.length} URL /permalink/ không trùng.${historyText}${actorStatusText} Hàng đợi mới đã thay thế kết quả vòng trước và hiện có ${queuedLinks.length} link.`,
         'ok'
       );
     } else if (result.itemCount > 0) {
       S.setBridgeStatus(
-        `Apify trả về ${result.itemCount} bản ghi nhưng không còn URL /permalink/ mới sau khi đối chiếu hai danh sách lịch sử.${historyText}`,
+        `Apify trả về ${result.itemCount} bản ghi nhưng không còn URL /permalink/ mới sau khi đối chiếu hai danh sách lịch sử.${historyText}${actorStatusText}`,
         'warn'
       );
     } else {
@@ -757,8 +770,7 @@
 
   function wireBridge() {
     S.addInputSave(B.facebookCookiesInput, S.STORE.facebookCookies);
-    S.addInputSave(B.apifyActorIdInput, S.STORE.apifyActorId);
-    S.getApifyActorId();
+    S.wireApifyActorIdInput();
     S.addInputSave(B.apifyApiTokenInput, S.STORE.apifyToken);
     wireSecretToggle(B.apifyApiTokenInput, B.apifyApiTokenToggle, 'Apify token');
     S.addInputSave(B.fbGroupIdInput, S.STORE.groupIds);

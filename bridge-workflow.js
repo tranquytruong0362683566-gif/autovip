@@ -296,6 +296,13 @@
     return /^\(?\s*next\s*\)?$/i.test(String(value || '').trim());
   }
 
+  function isDeletedFacebookPostResult(response) {
+    const data = API.bridgeResponseData(response);
+    return data?.postDeleted === true
+      || data?.code === 'FACEBOOK_POST_DELETED'
+      || response?.code === 'FACEBOOK_POST_DELETED';
+  }
+
   async function closeActiveReadTabIfAny() {
     const tabId = S.getActiveReadTabId();
     if (!tabId) return;
@@ -528,6 +535,13 @@
     );
 
     const responseData = API.bridgeResponseData(response);
+    if (isDeletedFacebookPostResult(response)) {
+      S.clearActiveReadTab();
+      S.saveRemovedLink(targetLink);
+      S.setBridgeStatus('bài viết đã bị xóa', 'warn');
+      return response;
+    }
+
     if (responseData?.restrictionDetected || responseData?.fatalStop || responseData?.code === 'FACEBOOK_FEATURE_RESTRICTED') {
       const restrictionMessage = responseData.message || 'Facebook đang tạm giới hạn tính năng đăng bài/bình luận. Hệ thống đã dừng.';
       S.setClosedLoopRunning(false);
@@ -570,8 +584,11 @@
       S.setBridgeStatus('Kết quả là (next), không gửi bình luận.', 'warn');
       return;
     }
-    await commentToFacebook(S.getPostLinks()[0] || '', comment);
-    if (S.getPostLinks()[0]) S.saveCommentedLink(S.getPostLinks()[0]);
+    const link = S.getPostLinks()[0] || '';
+    const response = await commentToFacebook(link, comment);
+    if (isDeletedFacebookPostResult(response)) return response;
+    if (link) S.saveCommentedLink(link);
+    return response;
   }
 
   async function autoWorkflow({ manageLoopState = true } = {}) {
@@ -612,7 +629,12 @@
           }
 
           if (AUTO_COMMENT_AFTER_GENERATE && comment) {
-            await commentToFacebook(link, comment);
+            const commentResponse = await commentToFacebook(link, comment);
+            if (isDeletedFacebookPostResult(commentResponse)) {
+              // Bài đã bị xóa: link đã được chuyển sang danh sách loại bỏ.
+              // Chuyển link kế tiếp ngay, không chạy waitAfterLink.
+              continue;
+            }
             S.saveCommentedLink(link);
             S.setPostLinks(S.getPostLinks().filter(item => S.normalizeUrl(item) !== S.normalizeUrl(link)));
           }

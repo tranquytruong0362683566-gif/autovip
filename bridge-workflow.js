@@ -5,6 +5,9 @@
   const API = window.fbBridgeApi;
   const APIFY = window.apifyGroupsApi;
   const B = S.B;
+  const FACEBOOK_TAB_LOAD_DELAY_MS = 5000;
+  const AUTO_COMMENT_AFTER_GENERATE = true;
+  const CLOSE_TAB_AFTER_COMMENT = true;
   let fatalStopMessage = '';
   let facebookAccountRefreshPromise = null;
   let facebookLogoutPromise = null;
@@ -409,7 +412,7 @@
       {
         url: link,
         link,
-        delayMs: Number(B.fbDelayMs?.value || 5000),
+        delayMs: FACEBOOK_TAB_LOAD_DELAY_MS,
         maxChars: Number(B.fbMaxChars?.value || 20000),
         openInBackground: true,
         active: false,
@@ -459,8 +462,8 @@
         commentText: comment,
         waitAfterSendMinMs: 11000,
         waitAfterSendMaxMs: 11000,
-        closeAfterComment: !!B.closeAfterComment?.checked,
-        closeAfter: !!B.closeAfterComment?.checked,
+        closeAfterComment: CLOSE_TAB_AFTER_COMMENT,
+        closeAfter: CLOSE_TAB_AFTER_COMMENT,
         openInBackground: true,
         activateTab: false,
         active: false
@@ -495,7 +498,7 @@
       throw stopError;
     }
 
-    if (tabId && (B.closeAfterComment?.checked !== false)) S.clearActiveReadTab();
+    if (tabId && CLOSE_TAB_AFTER_COMMENT) S.clearActiveReadTab();
     S.setBridgeStatus('Đã gửi bình luận xong.', 'ok');
     return response;
   }
@@ -550,7 +553,7 @@
             continue;
           }
 
-          if (B.autoCommentAfterGenerate?.checked !== false && comment) {
+          if (AUTO_COMMENT_AFTER_GENERATE && comment) {
             await commentToFacebook(link, comment);
             S.saveCommentedLink(link);
             S.setPostLinks(S.getPostLinks().filter(item => S.normalizeUrl(item) !== S.normalizeUrl(link)));

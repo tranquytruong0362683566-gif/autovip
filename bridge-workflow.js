@@ -88,7 +88,7 @@
     })();
   }
 
-  async function rotateFacebookCookieAfterLogout({ source = 'account-status' } = {}) {
+  async function rotateFacebookCookieAfterLogout({ source = 'account-status', autoRestart = true } = {}) {
     if (facebookCookieRotationPromise) return facebookCookieRotationPromise;
 
     facebookCookieRotationPromise = (async () => {
@@ -112,8 +112,13 @@
 
       renderFacebookAccount({ loggedIn: true, uid: account.uid });
       updateKnownFacebookAccount(true, account.uid);
-      S.setBridgeStatus(`Login Cookie thành công. Đã phát hiện UID ${account.uid}; đang chuẩn bị chạy tự động bằng API...`, 'ok');
-      scheduleAutoRunByApi(account.uid);
+      S.setBridgeStatus(
+        autoRestart
+          ? `Login Cookie thành công. Đã phát hiện UID ${account.uid}; đang chuẩn bị chạy tự động bằng API...`
+          : `Login Cookie thành công. Đã phát hiện UID ${account.uid}; tiếp tục vòng chạy hiện tại...`,
+        'ok'
+      );
+      if (autoRestart) scheduleAutoRunByApi(account.uid);
       return account;
     })().catch(error => {
       S.setBridgeStatus(`Đăng nhập cookie tự động thất bại: ${error.message || error}`, 'error');
@@ -154,7 +159,13 @@
         const loggedIn = data.loggedIn === true || Boolean(uid);
         renderFacebookAccount({ loggedIn, uid });
         const transitionedToLoggedOut = updateKnownFacebookAccount(loggedIn, uid);
-        if (transitionedToLoggedOut && !facebookLogoutPromise && !facebookCookieRotationPromise) {
+        if (
+          transitionedToLoggedOut
+          && !facebookLogoutPromise
+          && !facebookCookieRotationPromise
+          && !S.isClosedLoopRunning()
+          && !S.isBridgeBusy()
+        ) {
           rotateFacebookCookieAfterLogout({ source: 'extension-status-change' }).catch(() => {});
         }
         return { ...data, uid, loggedIn };
@@ -232,6 +243,42 @@
     return facebookLogoutPromise;
   }
 
+  async function ensureFacebookAccountBeforeCycle(cycleIndex = 1) {
+    S.setBridgeStatus(`Vòng ${cycleIndex}: đang kiểm tra UID Facebook trước khi quét nhóm...`, 'warn');
+
+    const account = await refreshFacebookAccount({ silent: true });
+    if (!account) {
+      const error = new Error('Không kiểm tra được UID Facebook từ Extension. Chưa lấy cookie để tránh mất dòng cookie khi kết nối lỗi.');
+      error.code = 'FACEBOOK_ACCOUNT_CHECK_FAILED';
+      throw error;
+    }
+
+    if (account?.loggedIn && account?.uid) {
+      S.setBridgeStatus(`Vòng ${cycleIndex}: đã phát hiện UID ${account.uid}. Bắt đầu quét nhóm...`, 'ok');
+      return account;
+    }
+
+    if (!getFacebookCookieLines().length) {
+      const error = new Error('Chưa có UID Facebook đăng nhập và ô Cookie Facebook trong Cài đặt nâng cao đang trống.');
+      error.code = 'FACEBOOK_ACCOUNT_AND_COOKIE_MISSING';
+      throw error;
+    }
+
+    S.setBridgeStatus(`Vòng ${cycleIndex}: chưa có UID đăng nhập. Đang lấy dòng Cookie Facebook đầu tiên để tự động đăng nhập...`, 'warn');
+    const loggedInAccount = await rotateFacebookCookieAfterLogout({
+      source: `automatic-cycle-${cycleIndex}`,
+      autoRestart: false
+    });
+
+    if (!loggedInAccount?.loggedIn || !loggedInAccount?.uid) {
+      const error = new Error('Đăng nhập Cookie Facebook xong nhưng chưa phát hiện được UID.');
+      error.code = 'FACEBOOK_UID_NOT_DETECTED';
+      throw error;
+    }
+
+    return loggedInAccount;
+  }
+
   async function waitAfterLink(linkIndex, totalLinks) {
     const seconds = S.getLinkPauseSeconds();
     if (seconds <= 0 || !S.isClosedLoopRunning()) return;
@@ -301,18 +348,22 @@
       }
     );
 
-    const links = S.filterNewLinks(API.extractLinksFromResponse(response));
+    const filtered = S.filterLinksAgainstHistory(API.extractLinksFromResponse(response));
+    const links = filtered.links;
     const existingLinks = S.getPostLinks();
     S.setPostLinks([...existingLinks, ...links]);
     const queuedLinks = S.getPostLinks();
+    const historyText = filtered.duplicateHistoryCount
+      ? ` Đã xóa ${filtered.duplicateHistoryCount} link trùng lịch sử (${filtered.duplicateCommented.length} đã bình luận, ${filtered.duplicateRemoved.length} đã loại bỏ).`
+      : '';
 
     if (links.length) {
       S.setBridgeStatus(
-        `Bộ quét Extension đã lấy ${links.length} link ${modeLabel} mới. Tổng hàng đợi hiện có ${queuedLinks.length} link.`,
+        `Bộ quét Extension đã lấy ${links.length} link ${modeLabel} không trùng và hiển thị trong hàng đợi.${historyText} Tổng hàng đợi hiện có ${queuedLinks.length} link.`,
         'ok'
       );
     } else {
-      S.setBridgeStatus(`Bộ quét Extension không có link ${modeLabel} mới sau khi lọc trùng.`, 'warn');
+      S.setBridgeStatus(`Bộ quét Extension không có link ${modeLabel} mới sau khi đối chiếu hai danh sách lịch sử.${historyText}`, 'warn');
     }
 
     return links;
@@ -355,19 +406,23 @@
       scanMode
     });
 
-    const links = S.filterNewLinks(result.links);
+    const filtered = S.filterLinksAgainstHistory(result.links);
+    const links = filtered.links;
     const existingLinks = S.getPostLinks();
     S.setPostLinks([...existingLinks, ...links]);
     const queuedLinks = S.getPostLinks();
+    const historyText = filtered.duplicateHistoryCount
+      ? ` Đã xóa ${filtered.duplicateHistoryCount} link trùng lịch sử (${filtered.duplicateCommented.length} đã bình luận, ${filtered.duplicateRemoved.length} đã loại bỏ).`
+      : '';
 
     if (links.length) {
       S.setBridgeStatus(
-        `Apify trả về ${result.itemCount} bản ghi, đã lấy ${links.length} URL /permalink/ mới và điền vào ô Link bài viết Facebook. Tổng hàng đợi hiện có ${queuedLinks.length} link.`,
+        `Apify trả về ${result.itemCount} bản ghi, còn ${links.length} URL /permalink/ không trùng và đã hiển thị trong ô Link bài viết Facebook.${historyText} Tổng hàng đợi hiện có ${queuedLinks.length} link.`,
         'ok'
       );
     } else if (result.itemCount > 0) {
       S.setBridgeStatus(
-        `Apify trả về ${result.itemCount} bản ghi nhưng không tìm thấy URL /permalink/ mới hợp lệ hoặc tất cả link đã có trong log.`,
+        `Apify trả về ${result.itemCount} bản ghi nhưng không còn URL /permalink/ mới sau khi đối chiếu hai danh sách lịch sử.${historyText}`,
         'warn'
       );
     } else {
@@ -525,6 +580,7 @@
     }
 
     if (manageLoopState) {
+      await ensureFacebookAccountBeforeCycle(1);
       fatalStopMessage = '';
       S.setClosedLoopRunning(true);
       B.stopClosedLoopBtn?.classList.remove('hidden');
@@ -612,6 +668,15 @@
 
     try {
       while (S.isClosedLoopRunning()) {
+        try {
+          await ensureFacebookAccountBeforeCycle(cycleIndex);
+        } catch (error) {
+          fatalStopMessage = error.message || String(error);
+          S.setClosedLoopRunning(false);
+          S.setBridgeStatus(fatalStopMessage, 'error');
+          break;
+        }
+
         S.setBridgeStatus(`Đang chạy vòng ${cycleIndex}...`, 'warn');
         await scanGroupLinks({ preferApify: true });
         if (!S.isClosedLoopRunning()) break;
@@ -625,6 +690,7 @@
           continue;
         }
 
+        S.setBridgeStatus(`Vòng ${cycleIndex}: đã lọc xong link. Đang đọc description của link đầu tiên ngay...`, 'warn');
         await autoWorkflow({ manageLoopState: false });
 
         if (!S.isClosedLoopRunning()) break;
@@ -733,6 +799,7 @@
     autoWorkflow,
     commentCurrentTab,
     refreshFacebookAccount,
-    logoutFacebookAccount
+    logoutFacebookAccount,
+    ensureFacebookAccountBeforeCycle
   };
 }());

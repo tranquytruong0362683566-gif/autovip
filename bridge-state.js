@@ -212,12 +212,38 @@
     if (B.removedCountStat) B.removedCountStat.textContent = String(list.length);
   }
 
+  function filterLinksAgainstHistory(links) {
+    const candidates = uniqueLinks(Array.isArray(links) ? links : parseLines(links));
+    const commented = new Set(getCommentedLinks().map(normalizeUrl));
+    const removed = new Set(getRemovedLinks().map(normalizeUrl));
+    const accepted = [];
+    const duplicateCommented = [];
+    const duplicateRemoved = [];
+
+    for (const link of candidates) {
+      const key = normalizeUrl(link);
+      if (commented.has(key)) {
+        duplicateCommented.push(link);
+        continue;
+      }
+      if (removed.has(key)) {
+        duplicateRemoved.push(link);
+        continue;
+      }
+      accepted.push(link);
+    }
+
+    return {
+      links: accepted,
+      duplicateCommented,
+      duplicateRemoved,
+      duplicateHistoryCount: duplicateCommented.length + duplicateRemoved.length,
+      candidateCount: candidates.length
+    };
+  }
+
   function filterNewLinks(links) {
-    const processed = new Set([
-      ...getCommentedLinks(),
-      ...getRemovedLinks()
-    ].map(normalizeUrl));
-    return uniqueLinks(links).filter(link => !processed.has(normalizeUrl(link)));
+    return filterLinksAgainstHistory(links).links;
   }
 
   function updatePostLinkCounter(links = null) {
@@ -351,6 +377,7 @@
     getRemovedLinks,
     saveRemovedLink,
     renderRemovedLinks,
+    filterLinksAgainstHistory,
     filterNewLinks,
     syncPostLinksInput,
     updatePostLinkCounter,

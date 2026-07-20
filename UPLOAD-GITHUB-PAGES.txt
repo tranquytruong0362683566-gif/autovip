@@ -1,13 +1,13 @@
-AUTOVIP WEB — GIAO DIỆN INCOKIT + QUY TRÌNH AUTOGPT ĐẦY ĐỦ v1.1.0
+AUTOVIP WEB — GIAO DIỆN INCOKIT + QUY TRÌNH AUTOGPT ĐẦY ĐỦ v1.1.1
 
 1. Giải nén file ZIP.
 2. Tải TẤT CẢ file bên trong ZIP lên đúng thư mục /autovip/ đang chứa index.html trên GitHub Pages.
 3. Không tải cả thư mục cha lồng thêm một cấp.
-4. Ghi đè toàn bộ file cũ bằng toàn bộ file trong gói v1.1.0.
+4. Ghi đè toàn bộ file cũ bằng toàn bộ file trong gói v1.1.1.
 5. Đảm bảo incokit-workflow-v1.0.5.css và incokit-ui-v1.0.5.js nằm cùng cấp với index.html.
-6. Cài hoặc Reload extension Autovip Full v2.1.0 tại chrome://extensions.
+6. Cài hoặc Reload extension Autovip Full v2.1.1 tại chrome://extensions.
 7. Đóng tab Web Autovip cũ, mở lại:
-   https://tranquytruong0362683566-gif.github.io/autovip/?v=20260720-110
+   https://tranquytruong0362683566-gif.github.io/autovip/?v=20260720-111
 8. Nhấn Ctrl + Shift + R một lần.
 
 Web không còn ô Extension ID. Extension tự liên kết bằng content bridge chỉ trên đúng URL /autovip/.
@@ -25,3 +25,8 @@ THAY ĐỔI v1.1.0:
 - Khi có Apify token, web ưu tiên lấy URL qua Apify; khi chưa có token, tự chuyển sang bộ quét nhóm trực tiếp trong Extension.
 - Khôi phục đầy đủ action quét nhóm và đọc bài của Extension.
 - Đồng bộ UID, đăng xuất và đăng nhập Cookie trực tiếp giữa web và Extension.
+
+THAY ĐỔI v1.1.1:
+- Link mới được chuẩn hóa rồi đối chiếu riêng với cả Link đã bình luận thành công và Link đã loại bỏ; chỉ link không trùng mới vào hàng đợi.
+- Sau khi quét và lọc xong, vòng tự động đọc description của link đầu tiên ngay, không chờ thừa.
+- Trước mỗi vòng tự động, web kiểm tra UID; nếu chưa đăng nhập sẽ lấy và xóa dòng Cookie Facebook đầu tiên, login rồi tiếp tục vòng hiện tại.

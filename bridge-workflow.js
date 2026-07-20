@@ -431,6 +431,19 @@
       (total, groupResult) => total + (Number(groupResult.postUrlFieldCount) || 0),
       0
     );
+    const reconstructedPostUrlCount = result.groupResults.reduce(
+      (total, groupResult) => total + (Number(groupResult.reconstructedPostUrlCount) || 0),
+      0
+    );
+    const invalidPostUrlCount = result.groupResults.reduce(
+      (total, groupResult) => total + (Number(groupResult.invalidPostUrlCount) || 0),
+      0
+    );
+    const duplicatePostUrlCount = result.groupResults.reduce(
+      (total, groupResult) => total + (Number(groupResult.duplicatePostUrlCount) || 0),
+      0
+    );
+    const postUrlDetailText = ` Đã chuyển đổi ${reconstructedPostUrlCount} link định dạng khác; sai định dạng ${invalidPostUrlCount}; trùng trong kết quả Apify ${duplicatePostUrlCount}.`;
     S.setPostLinks(links);
     const queuedLinks = S.getPostLinks();
     const historyText = filtered.duplicateHistoryCount
@@ -439,7 +452,7 @@
 
     if (links.length) {
       S.setBridgeStatus(
-        `Apify đã quét riêng ${result.groupResults.length} nhóm theo nguồn ${modeLabel}, nhận ${result.itemCount} bản ghi, đọc ${postUrlFieldCount} giá trị post_url và giữ ${links.length} URL /permalink/ không trùng.${historyText}${actorStatusText} Hàng đợi mới đã thay thế kết quả vòng trước và hiện có ${queuedLinks.length} link.`,
+        `Apify đã quét riêng ${result.groupResults.length} nhóm theo nguồn ${modeLabel}, nhận ${result.itemCount} bản ghi, đọc ${postUrlFieldCount} giá trị post_url và giữ ${links.length} URL /permalink/ không trùng.${postUrlDetailText}${historyText}${actorStatusText} Hàng đợi mới đã thay thế kết quả vòng trước và hiện có ${queuedLinks.length} link.`,
         'ok'
       );
     } else if (result.itemCount > 0) {

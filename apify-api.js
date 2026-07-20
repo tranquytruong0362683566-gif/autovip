@@ -235,6 +235,57 @@
     return output;
   }
 
+  function findFirstFieldString(value, fieldNames, depth = 0) {
+    if (depth > 8 || value == null || typeof value !== 'object') return '';
+    const wanted = new Set(fieldNames.map(name => String(name).replace(/[^a-z0-9]/gi, '').toLowerCase()));
+
+    for (const [key, nestedValue] of Object.entries(value)) {
+      const normalizedKey = String(key).replace(/[^a-z0-9]/gi, '').toLowerCase();
+      if (wanted.has(normalizedKey) && ['string', 'number'].includes(typeof nestedValue)) {
+        const result = text(nestedValue);
+        if (result) return result;
+      }
+    }
+
+    for (const nestedValue of Object.values(value)) {
+      if (!nestedValue || typeof nestedValue !== 'object') continue;
+      const result = findFirstFieldString(nestedValue, fieldNames, depth + 1);
+      if (result) return result;
+    }
+
+    return '';
+  }
+
+  function extractGroupIdFromUrl(value) {
+    const normalized = normalizeGroupUrl(value);
+    const parsed = parseUrl(normalized);
+    const match = parsed?.pathname.match(/^\/groups\/([^/?#]+)/i);
+    return text(match?.[1]);
+  }
+
+  function extractPostIdFromUrl(value) {
+    const parsed = parseUrl(value);
+    if (!parsed || normalizeFacebookHost(parsed.hostname) !== 'www.facebook.com') return '';
+
+    const pathname = parsed.pathname.replace(/\/{2,}/g, '/').replace(/\/+$/, '');
+    const pathMatch = pathname.match(/\/(?:posts|permalink)\/([^/?#]+)$/i);
+    if (pathMatch?.[1]) return text(pathMatch[1]);
+
+    return text(
+      parsed.searchParams.get('story_fbid') ||
+      parsed.searchParams.get('storyFbid') ||
+      parsed.searchParams.get('multi_permalinks') ||
+      parsed.searchParams.get('fbid')
+    );
+  }
+
+  function buildGroupPermalink(groupId, postId) {
+    const cleanGroupId = normalizePathSegment(groupId);
+    const cleanPostId = normalizePathSegment(postId);
+    if (!cleanGroupId || !cleanPostId) return '';
+    return `https://www.facebook.com/groups/${cleanGroupId}/permalink/${cleanPostId}/`;
+  }
+
   function extractPostUrlFromItem(item) {
     if (typeof item === 'string') return normalizePostUrl(item);
     if (!item || typeof item !== 'object') return '';
@@ -260,27 +311,67 @@
     return '';
   }
 
-  function extractPostUrls(items, postUrlFieldValues = null) {
+  function extractPostUrls(items, postUrlFieldValues = null, options = {}) {
     const links = [];
     const seen = new Set();
+    const diagnostics = options?.diagnostics && typeof options.diagnostics === 'object'
+      ? options.diagnostics
+      : {};
+    diagnostics.invalidPostUrlCount = 0;
+    diagnostics.duplicatePostUrlCount = 0;
+    diagnostics.reconstructedPostUrlCount = 0;
+    const fallbackGroupId = extractGroupIdFromUrl(options?.groupUrl);
 
-    function addLink(value) {
-      const link = normalizePostUrl(value);
-      if (!link || seen.has(link)) return;
+    function addLink(value, item = null) {
+      let link = normalizePostUrl(value);
+      if (!link) {
+        const postId = findFirstFieldString(item, [
+          'post_id',
+          'postId',
+          'story_fbid',
+          'storyFbid'
+        ]) || extractPostIdFromUrl(value);
+        const groupId = fallbackGroupId || findFirstFieldString(item, [
+          'group_id',
+          'groupId',
+          'page_id',
+          'pageId',
+          'facebook_id',
+          'facebookId'
+        ]);
+        link = buildGroupPermalink(groupId, postId);
+        if (link) diagnostics.reconstructedPostUrlCount += 1;
+      }
+      if (!link) {
+        diagnostics.invalidPostUrlCount += 1;
+        return;
+      }
+      if (seen.has(link)) {
+        diagnostics.duplicatePostUrlCount += 1;
+        return;
+      }
       seen.add(link);
       links.push(link);
     }
 
     // Luôn lấy toàn bộ giá trị của trường post_url/postUrl trong dataset trước.
     // Không dừng ở URL đầu tiên và không giới hạn số URL theo số lượng yêu cầu.
-    const explicitPostUrls = Array.isArray(postUrlFieldValues)
-      ? postUrlFieldValues
-      : extractPostUrlFieldValues(items);
-    for (const value of explicitPostUrls) addLink(value);
+    const itemList = Array.isArray(items) ? items : [];
+    for (const item of itemList) {
+      const itemPostUrls = extractPostUrlFieldValues(item);
+      if (itemPostUrls.length) {
+        for (const value of itemPostUrls) addLink(value, item);
+      } else {
+        // Fallback cho Actor dùng tên trường URL khác post_url.
+        addLink(extractPostUrlFromItem(item), item);
+      }
+    }
 
-    for (const item of Array.isArray(items) ? items : []) {
-      // Fallback cho Actor dùng tên trường URL khác post_url.
-      addLink(extractPostUrlFromItem(item));
+    if (!itemList.length) {
+      const explicitPostUrls = Array.isArray(postUrlFieldValues)
+        ? postUrlFieldValues
+        : extractPostUrlFieldValues(items);
+      for (const value of explicitPostUrls) addLink(value);
     }
 
     return links;
@@ -365,12 +456,16 @@
       // bộ dataset thực tế thay vì tiếp tục cắt ở query API hoặc phía trình duyệt.
       const items = extractItems(payload);
       const postUrlFieldValues = extractPostUrlFieldValues(items);
-      const links = extractPostUrls(items, postUrlFieldValues);
+      const diagnostics = {};
+      const links = extractPostUrls(items, postUrlFieldValues, { groupUrl, diagnostics });
 
       return {
         groupUrl,
         itemCount: items.length,
         postUrlFieldCount: postUrlFieldValues.length,
+        reconstructedPostUrlCount: diagnostics.reconstructedPostUrlCount,
+        invalidPostUrlCount: diagnostics.invalidPostUrlCount,
+        duplicatePostUrlCount: diagnostics.duplicatePostUrlCount,
         links,
         items
       };

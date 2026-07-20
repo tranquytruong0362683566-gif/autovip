@@ -11,10 +11,10 @@
   if (!context) return;
 
   const GRID_SIZE = 40;
-  const LINE_COLOR = 'rgba(91, 198, 119, 0.10)';
+  const LINE_COLOR = 'rgba(91, 198, 119, 0.17)';
   const LINE_WIDTH = 1;
-  const POINTER_RADIUS = 200;
-  const POINTER_STRENGTH = 22;
+  const POINTER_RADIUS = 230;
+  const POINTER_STRENGTH = 30;
   const SUBDIVISIONS = 6;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -38,8 +38,6 @@
   }
 
   function getDisplacement(x, y) {
-    if (reducedMotion.matches) return { x: 0, y: 0 };
-
     const deltaX = x - pointerX;
     const deltaY = y - pointerY;
     const distance = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
@@ -48,7 +46,8 @@
     const normalized = distance / POINTER_RADIUS;
     const progress = 1 - normalized;
     const eased = progress * progress * (3 - (2 * progress));
-    const magnitude = eased * POINTER_STRENGTH;
+    const motionScale = reducedMotion.matches ? 0.45 : 1;
+    const magnitude = eased * POINTER_STRENGTH * motionScale;
 
     return {
       x: (deltaX / distance) * magnitude,
@@ -143,11 +142,13 @@
   function handlePointerMove(event) {
     pointerX = event.clientX;
     pointerY = event.clientY;
+    if (reducedMotion.matches) drawGrid();
   }
 
   function handlePointerLeave() {
     pointerX = -9999;
     pointerY = -9999;
+    if (reducedMotion.matches) drawGrid();
   }
 
   function destroy() {

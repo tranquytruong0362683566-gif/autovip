@@ -1,13 +1,13 @@
-AUTOVIP WEB — GIAO DIỆN INCOKIT + QUY TRÌNH AUTOGPT ĐẦY ĐỦ v1.1.2
+AUTOVIP WEB — GIAO DIỆN INCOKIT + QUY TRÌNH AUTOGPT ĐẦY ĐỦ v1.1.3
 
 1. Giải nén file ZIP.
 2. Tải TẤT CẢ file bên trong ZIP lên đúng thư mục /autovip/ đang chứa index.html trên GitHub Pages.
 3. Không tải cả thư mục cha lồng thêm một cấp.
-4. Ghi đè toàn bộ file cũ bằng toàn bộ file trong gói v1.1.2.
+4. Ghi đè toàn bộ file cũ bằng toàn bộ file trong gói v1.1.3.
 5. Đảm bảo incokit-workflow-v1.0.5.css và incokit-ui-v1.0.5.js nằm cùng cấp với index.html.
 6. Cài hoặc Reload extension Autovip Full v2.1.1 tại chrome://extensions.
 7. Đóng tab Web Autovip cũ, mở lại:
-   https://tranquytruong0362683566-gif.github.io/autovip/?v=20260720-112
+   https://tranquytruong0362683566-gif.github.io/autovip/?v=20260720-113
 8. Nhấn Ctrl + Shift + R một lần.
 
 Web không còn ô Extension ID. Extension tự liên kết bằng content bridge chỉ trên đúng URL /autovip/.
@@ -35,3 +35,9 @@ THAY ĐỔI v1.1.2:
 - Mỗi nhóm Facebook được gọi bằng một Apify Actor run độc lập, đúng nguồn Bài viết mới hoặc Bài viết Top đã chọn.
 - Gửi đồng thời maxResults và giới hạn dataset output theo đúng Số link lấy mỗi nhóm; kết quả phía web tiếp tục được cắt cứng lần cuối nên không thể vượt quá giới hạn.
 - Mỗi lần quét tạo một hàng đợi mới và thay thế kết quả vòng trước, không còn gộp Bài viết Top với Bài viết mới qua các vòng tự động.
+
+THAY ĐỔI v1.1.3:
+- Tăng độ trong suốt của thẻ, khu vực nhập liệu, thanh điều hướng và bảng kết quả để nền lưới hiện rõ hơn mà nội dung vẫn dễ đọc.
+- Tăng độ rõ và độ phản ứng của nền lưới theo vị trí chuột; chế độ Giảm chuyển động của hệ điều hành vẫn giữ tương tác ở mức nhẹ.
+- Bổ sung hover dễ nhận biết cho thẻ chức năng, menu, nút, ô nhập liệu, tài khoản Facebook và các mục kho mẫu.
+- Chỉ thay đổi giao diện và hiệu ứng; giữ nguyên toàn bộ logic Apify, lọc link, bình luận tự động và Extension bridge của v1.1.2.

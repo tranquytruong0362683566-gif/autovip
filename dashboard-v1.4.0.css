@@ -1,4 +1,4 @@
-/* AutoVIP v1.4.4 — reference layout + exact transparent typing-cat motion. */
+/* AutoVIP v1.5.0 — approved workstation mockup + 3D typing cat. */
 
 :root {
   --container: 1460px;
@@ -1152,5 +1152,565 @@ select {
   .cat-typing-scene {
     height: 280px;
     margin-top: -104px;
+  }
+}
+
+/* v1.5.0 — giao diện workstation theo đúng ảnh mẫu đã duyệt. */
+:root {
+  --container: 1460px;
+  --workstation-line: rgba(56, 242, 106, .52);
+  --workstation-glass: rgba(2, 20, 11, .43);
+  --workstation-glass-hover: rgba(7, 35, 20, .58);
+}
+
+.workstation-stage {
+  width: min(calc(100% - 40px), 1536px);
+  margin: 28px auto 310px;
+  position: relative;
+  z-index: 3;
+}
+
+.workstation-shell {
+  min-height: 720px;
+  position: relative;
+  overflow: visible;
+  border: 1px solid rgba(163, 255, 188, .52);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(4, 25, 14, .72), rgba(1, 14, 8, .57)),
+    rgba(2, 14, 8, .52);
+  box-shadow:
+    inset 0 0 0 10px rgba(0, 7, 4, .42),
+    inset 0 0 55px rgba(56, 242, 106, .035),
+    0 38px 100px -56px rgba(56, 242, 106, .46),
+    0 24px 60px rgba(0, 0, 0, .36);
+  backdrop-filter: blur(12px) saturate(112%);
+  -webkit-backdrop-filter: blur(12px) saturate(112%);
+}
+
+.workstation-shell::before {
+  content: "";
+  position: absolute;
+  inset: 11px;
+  z-index: 0;
+  pointer-events: none;
+  border: 1px solid rgba(56, 242, 106, .18);
+  border-radius: 19px;
+}
+
+.workstation-stage .app-header {
+  min-height: 86px;
+  position: relative;
+  top: auto;
+  z-index: 12;
+  border-bottom: 1px solid rgba(56, 242, 106, .15);
+  border-radius: 27px 27px 0 0;
+  background: rgba(2, 18, 10, .42);
+  box-shadow: none;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.workstation-stage .header-inner {
+  width: 100%;
+  min-height: 86px;
+  padding: 14px 34px;
+  grid-template-columns: minmax(245px, .7fr) minmax(0, 2.3fr);
+  gap: 28px;
+}
+
+.workstation-stage .header-nav {
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.workstation-stage .header-nav-item,
+.workstation-stage .header-nav a.header-nav-item,
+.workstation-stage .header-nav button.header-nav-item {
+  padding-inline: 10px;
+}
+
+.workstation-stage .system-dashboard {
+  min-height: 632px;
+  padding: 28px 34px 26px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0 0 27px 27px;
+  background:
+    linear-gradient(rgba(56, 242, 106, .027) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 242, 106, .027) 1px, transparent 1px),
+    radial-gradient(circle at 71% 36%, rgba(56, 242, 106, .08), transparent 34%),
+    linear-gradient(150deg, rgba(3, 25, 14, .35), rgba(1, 14, 8, .14));
+  background-size: 42px 42px, 42px 42px, auto, auto;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.workstation-stage .system-dashboard::before {
+  display: none;
+}
+
+.workstation-stage .system-dashboard.card:hover {
+  transform: none;
+  background:
+    linear-gradient(rgba(56, 242, 106, .032) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 242, 106, .032) 1px, transparent 1px),
+    radial-gradient(circle at 71% 36%, rgba(56, 242, 106, .09), transparent 34%),
+    linear-gradient(150deg, rgba(3, 25, 14, .39), rgba(1, 14, 8, .17));
+  background-size: 42px 42px, 42px 42px, auto, auto;
+}
+
+.workstation-stage .system-monitor-column {
+  width: 100%;
+  height: 576px;
+  display: block;
+  position: relative;
+}
+
+.workstation-stage .system-monitor {
+  min-height: 576px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.workstation-stage .monitor-screen {
+  min-height: 576px;
+  overflow: visible;
+  background: transparent;
+}
+
+.workstation-stage .monitor-screen::before {
+  display: none;
+}
+
+.workstation-stage .monitor-toolbar {
+  width: 61.5%;
+  height: 46px;
+  padding-inline: 20px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 7;
+  border: 1px solid var(--workstation-line);
+  border-bottom-color: rgba(56, 242, 106, .16);
+  border-radius: 18px 18px 0 0;
+  background: rgba(3, 31, 16, .37);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.workstation-stage .monitor-toolbar > span {
+  width: 10px;
+  height: 10px;
+}
+
+.workstation-stage .terminal-panel {
+  width: 61.5%;
+  height: 425px;
+  padding: 26px 28px 22px;
+  position: absolute;
+  inset: 45px auto auto 0;
+  z-index: 6;
+  overflow: hidden;
+  border: 1px solid var(--workstation-line);
+  border-top: 0;
+  border-radius: 0 0 18px 18px;
+  background:
+    linear-gradient(145deg, rgba(1, 15, 8, .7), rgba(2, 25, 12, .42)),
+    var(--workstation-glass);
+  box-shadow: inset 0 0 34px rgba(56, 242, 106, .025);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.workstation-stage .terminal-command {
+  margin-bottom: 23px;
+  font-size: clamp(11px, .87vw, 14px);
+}
+
+.workstation-stage .terminal-log {
+  width: 100%;
+  gap: 9px;
+}
+
+.workstation-stage .terminal-line {
+  font-size: clamp(9px, .72vw, 11.5px);
+}
+
+.workstation-stage .terminal-progress {
+  width: 88%;
+  max-width: none;
+}
+
+.workstation-stage .system-side-panel {
+  width: 35.5%;
+  height: 425px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: auto;
+  z-index: 7;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: minmax(225px, 1.08fr) minmax(172px, .82fr);
+  gap: 14px;
+}
+
+.workstation-stage .system-clock-card,
+.workstation-stage .system-side-panel .facebook-account-bar {
+  background:
+    linear-gradient(145deg, rgba(2, 22, 11, .55), rgba(1, 13, 7, .36)),
+    var(--workstation-glass);
+  border-color: var(--workstation-line);
+  border-radius: 18px;
+  box-shadow: inset 0 0 28px rgba(56, 242, 106, .025);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
+}
+
+.workstation-stage .system-clock-card {
+  min-height: 225px;
+  padding: 23px 26px 20px;
+}
+
+.workstation-stage .system-card-title {
+  font-size: 12px;
+}
+
+.workstation-stage .system-clock-time {
+  font-size: clamp(44px, 4.15vw, 67px);
+}
+
+.workstation-stage .system-side-panel .facebook-account-bar {
+  min-height: 172px;
+  padding: 24px 26px;
+}
+
+.workstation-stage .facebook-account-main {
+  gap: 14px;
+}
+
+.workstation-stage .facebook-account-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+}
+
+.workstation-stage .facebook-account-label {
+  margin-bottom: 5px;
+  font-size: 10px;
+}
+
+.workstation-stage #facebookUidDisplay {
+  font-size: 12px;
+}
+
+.workstation-stage .hero-process {
+  width: 70%;
+  min-height: 88px;
+  padding: 14px 18px;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 7;
+  background:
+    linear-gradient(115deg, rgba(4, 35, 18, .38), rgba(1, 14, 7, .26)),
+    var(--workstation-glass);
+  border: 1px solid rgba(56, 242, 106, .42);
+  border-radius: 17px;
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
+}
+
+.workstation-stage .hero-process .process-step {
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 9px;
+  justify-items: start;
+  text-align: left;
+}
+
+.workstation-stage .hero-process .process-step span {
+  grid-row: 1 / 3;
+  align-self: center;
+}
+
+.workstation-stage .monitor-stand {
+  width: 33%;
+  height: 126px;
+  position: absolute;
+  left: 25%;
+  bottom: -129px;
+  z-index: 1;
+}
+
+.workstation-stage .monitor-stand span {
+  width: 39%;
+  height: 94px;
+  border-color: rgba(56, 242, 106, .36);
+  background: linear-gradient(90deg, rgba(2, 14, 8, .18), rgba(8, 40, 23, .6), rgba(2, 14, 8, .18));
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, .35);
+}
+
+.workstation-stage .monitor-stand i {
+  width: 100%;
+  height: 20px;
+  right: 0;
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(15, 55, 33, .8), rgba(1, 13, 7, .92));
+  box-shadow: 0 18px 30px rgba(0, 0, 0, .34), 0 0 24px rgba(56, 242, 106, .12);
+}
+
+.workstation-stage .cat-typing-scene {
+  width: 40%;
+  height: auto;
+  aspect-ratio: 1;
+  position: absolute;
+  right: -7%;
+  bottom: -290px;
+  z-index: 18;
+  opacity: 1;
+  filter: drop-shadow(0 25px 30px rgba(0, 0, 0, .48));
+}
+
+.workstation-stage .cat-typing-scene::before {
+  content: "";
+  width: 185px;
+  height: 74px;
+  position: absolute;
+  left: 5%;
+  bottom: 18%;
+  z-index: -1;
+  border-bottom: 3px solid rgba(56, 242, 106, .86);
+  border-left: 3px solid rgba(56, 242, 106, .66);
+  border-radius: 0 0 0 74px;
+  transform: rotate(8deg);
+  box-shadow: 0 5px 11px rgba(56, 242, 106, .28);
+}
+
+.workstation-stage .cat-artboard {
+  position: absolute;
+  inset: 0;
+  animation: cat-typing-bob 3.2s ease-in-out infinite;
+}
+
+.cat-typing-sprite {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background-image: url("./cat-typing-3d-sprite.png?v=20260721-150");
+  background-repeat: no-repeat;
+  background-size: 200% 200%;
+  background-position: 0 0;
+  animation: cat-typing-frames 1.28s step-end infinite;
+  will-change: background-position;
+}
+
+.app-shell {
+  padding-top: 26px;
+}
+
+@keyframes cat-typing-frames {
+  0%, 23% { background-position: 0 0; }
+  24%, 48% { background-position: 100% 0; }
+  49%, 73% { background-position: 0 100%; }
+  74%, 100% { background-position: 100% 100%; }
+}
+
+@keyframes cat-typing-bob {
+  0%, 100% { transform: translateY(0) rotate(-.35deg); }
+  50% { transform: translateY(3px) rotate(.35deg); }
+}
+
+@media (max-width: 1250px) {
+  .workstation-stage {
+    width: min(calc(100% - 28px), 1180px);
+    margin-top: 14px;
+    margin-bottom: 285px;
+  }
+
+  .workstation-stage .header-inner {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .workstation-stage .header-brand {
+    justify-self: center;
+  }
+
+  .workstation-stage .header-nav {
+    justify-content: flex-start;
+  }
+
+  .workstation-stage .system-dashboard {
+    min-height: 646px;
+  }
+
+  .workstation-stage .monitor-toolbar,
+  .workstation-stage .terminal-panel {
+    width: 59%;
+  }
+
+  .workstation-stage .system-side-panel {
+    width: 38%;
+  }
+
+  .workstation-stage .hero-process {
+    width: 66%;
+  }
+
+  .workstation-stage .cat-typing-scene {
+    width: 44%;
+    right: -6%;
+    bottom: -264px;
+  }
+}
+
+@media (max-width: 900px) {
+  .workstation-stage {
+    margin-bottom: 272px;
+  }
+
+  .workstation-shell {
+    min-height: 1020px;
+    border-radius: 21px;
+  }
+
+  .workstation-stage .app-header {
+    border-radius: 20px 20px 0 0;
+  }
+
+  .workstation-stage .system-dashboard {
+    min-height: 870px;
+    padding: 20px;
+  }
+
+  .workstation-stage .system-monitor-column,
+  .workstation-stage .system-monitor,
+  .workstation-stage .monitor-screen {
+    height: 828px;
+    min-height: 828px;
+  }
+
+  .workstation-stage .monitor-toolbar,
+  .workstation-stage .terminal-panel {
+    width: 100%;
+  }
+
+  .workstation-stage .terminal-panel {
+    height: 320px;
+  }
+
+  .workstation-stage .system-side-panel {
+    width: 100%;
+    height: 278px;
+    top: 345px;
+    left: 0;
+    right: auto;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr;
+  }
+
+  .workstation-stage .system-clock-card,
+  .workstation-stage .system-side-panel .facebook-account-bar {
+    min-height: 278px;
+  }
+
+  .workstation-stage .system-side-panel .facebook-account-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .workstation-stage .hero-process {
+    width: 100%;
+    bottom: 92px;
+  }
+
+  .workstation-stage .cat-typing-scene {
+    width: 58%;
+    right: -5%;
+    bottom: -248px;
+  }
+
+  .workstation-stage .monitor-stand {
+    left: 22%;
+    bottom: -132px;
+  }
+}
+
+@media (max-width: 620px) {
+  .workstation-stage {
+    width: calc(100% - 18px);
+    margin-bottom: 248px;
+  }
+
+  .workstation-shell {
+    min-height: 1240px;
+  }
+
+  .workstation-stage .header-inner {
+    padding-inline: 17px;
+  }
+
+  .workstation-stage .system-dashboard {
+    min-height: 1088px;
+    padding: 14px;
+  }
+
+  .workstation-stage .system-monitor-column,
+  .workstation-stage .system-monitor,
+  .workstation-stage .monitor-screen {
+    height: 1048px;
+    min-height: 1048px;
+  }
+
+  .workstation-stage .terminal-panel {
+    height: 334px;
+    padding: 22px 18px;
+  }
+
+  .workstation-stage .system-side-panel {
+    height: 500px;
+    top: 360px;
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+
+  .workstation-stage .system-clock-card,
+  .workstation-stage .system-side-panel .facebook-account-bar {
+    min-height: 240px;
+  }
+
+  .workstation-stage .hero-process {
+    bottom: 82px;
+  }
+
+  .workstation-stage .hero-process strong {
+    font-size: 9px;
+  }
+
+  .workstation-stage .cat-typing-scene {
+    width: 78%;
+    right: -9%;
+    bottom: -226px;
+  }
+
+  .workstation-stage .monitor-stand {
+    width: 42%;
+    left: 18%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cat-typing-sprite {
+    animation-duration: 1.28s !important;
+  }
+
+  .workstation-stage .cat-artboard {
+    animation: none !important;
   }
 }

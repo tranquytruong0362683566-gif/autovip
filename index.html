@@ -12,12 +12,14 @@
   <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=20260720-v113-hacker">
   <link rel="manifest" href="./site.webmanifest?v=20260720-v113-hacker">
   <link rel="stylesheet" href="./incokit-workflow-v1.0.5.css?v=20260720-115-transparent-all-panels">
-  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260721-145-reference-layout">
+  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260721-150-approved-workstation">
 </head>
 <body>
   <canvas id="magnetic-grid" aria-hidden="true"></canvas>
   <div class="page-glow" aria-hidden="true"></div>
 
+  <section class="workstation-stage" id="top" aria-label="Bảng điều khiển AutoVIP">
+    <div class="workstation-shell">
   <header class="app-header">
     <div class="header-inner">
       <a class="header-brand" href="#top" aria-label="AI Auto Comment Facebook">
@@ -44,7 +46,6 @@
     </div>
   </header>
 
-  <main class="app-shell" id="top">
     <section class="system-dashboard card" id="systemDashboard" aria-labelledby="pageTitle">
       <h1 class="sr-only" id="pageTitle">Trần Quý Trường — AI Auto Comment Facebook</h1>
 
@@ -89,26 +90,30 @@
                 <button class="btn btn-danger btn-sm" id="facebookLogoutBtn" type="button" disabled>Đăng Xuất</button>
               </div>
 
-              <div class="hero-process" id="systemProcessSteps" role="group" aria-label="Trình tự hoạt động">
-                <div class="process-step is-active" data-process-step="scan"><span>01</span><strong>Lấy Link</strong></div>
-                <i aria-hidden="true">→</i>
-                <div class="process-step" data-process-step="ai"><span>02</span><strong>AI Xử Lý</strong></div>
-                <i aria-hidden="true">→</i>
-                <div class="process-step" data-process-step="comment"><span>03</span><strong>Bình Luận</strong></div>
-              </div>
             </aside>
+
+            <div class="hero-process" id="systemProcessSteps" role="group" aria-label="Trình tự hoạt động">
+              <div class="process-step is-active" data-process-step="scan"><span>01</span><strong>Lấy Link</strong></div>
+              <i aria-hidden="true">→</i>
+              <div class="process-step" data-process-step="ai"><span>02</span><strong>AI Xử Lý</strong></div>
+              <i aria-hidden="true">→</i>
+              <div class="process-step" data-process-step="comment"><span>03</span><strong>Bình Luận</strong></div>
+            </div>
           </div>
         </div>
         <div class="monitor-stand" aria-hidden="true"><span></span><i></i></div>
       </div>
 
-      <div class="cat-typing-scene" aria-label="Mèo đang gõ bàn phím">
+      <div class="cat-typing-scene" aria-label="Mèo 3D đang gõ bàn phím">
         <div class="cat-artboard">
-          <img class="cat-typing-gif" src="./cat-typing-reference.gif?v=20260721-145" alt="Mèo đang gõ bàn phím">
+          <span class="cat-typing-sprite" aria-hidden="true"></span>
         </div>
       </div>
     </section>
+    </div>
+  </section>
 
+  <main class="app-shell">
     <div class="workflow-stack">
       <section class="workflow-panel card" id="source" aria-labelledby="autoRunTitle">
         <div class="panel-heading">
@@ -492,6 +497,6 @@
   <script src="bridge-api.js?v=20260720-113"></script>
   <script src="apify-api.js?v=20260721-130"></script>
   <script src="bridge-workflow.js?v=20260721-130"></script>
-  <script src="dashboard-v1.4.0.js?v=20260721-145-reference-layout"></script>
+  <script src="dashboard-v1.4.0.js?v=20260721-150-approved-workstation"></script>
 </body>
 </html>

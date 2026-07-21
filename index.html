@@ -5,201 +5,113 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#07100a">
-  <title>AI Auto Comment Facebook</title>
+  <title>Trần Quý Trường · AI Auto Comment</title>
   <link rel="icon" href="./favicon.svg?v=20260720-v113-hacker" type="image/svg+xml">
   <link rel="icon" href="./favicon-32x32.png?v=20260720-v113-hacker" type="image/png" sizes="32x32">
   <link rel="shortcut icon" href="./favicon.ico?v=20260720-v113-hacker">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=20260720-v113-hacker">
   <link rel="manifest" href="./site.webmanifest?v=20260720-v113-hacker">
   <link rel="stylesheet" href="./incokit-workflow-v1.0.5.css?v=20260720-115-transparent-all-panels">
+  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260721-140-system-dashboard">
 </head>
 <body>
   <canvas id="magnetic-grid" aria-hidden="true"></canvas>
   <div class="page-glow" aria-hidden="true"></div>
 
-  <a class="announcement-bar" href="#workflow">
-    <span class="announcement-badge">MỚI</span>
-    <span>Tự động bằng Apify, quét thủ công qua tab Facebook và đọc nội dung dự phòng bằng Rakko.</span>
-    <strong>Xem quy trình ↓</strong>
-  </a>
-
   <header class="app-header">
     <div class="header-inner">
       <a class="header-brand" href="#top" aria-label="AI Auto Comment Facebook">
-        <span class="brand-logo" aria-hidden="true">🤖</span>
+        <span class="brand-logo brand-image" aria-hidden="true"><img src="./favicon-192x192.png" alt=""></span>
         <span>
-          <strong>AutoVIP</strong>
+          <strong>Trần Quý Trường</strong>
           <small>AI Auto Comment</small>
         </span>
       </a>
 
       <nav class="header-nav" aria-label="Điều hướng chính">
-        <a href="#source">Nguồn bài</a>
-        <a href="#queue">Hàng đợi</a>
-        <a href="#composer">Soạn bình luận</a>
-        <a href="#templates">Kho mẫu</a>
-        <a href="#records">Kết quả</a>
+        <button class="header-nav-item header-settings-trigger" id="openApiSettingsBtn" type="button" aria-controls="apiSettingsModal">
+          <span class="nav-glyph" aria-hidden="true">☷</span><span>Cài Đặt API</span>
+        </button>
+        <button class="header-nav-item header-settings-trigger" id="openWebSettingsBtn" type="button" aria-controls="webSettingsModal">
+          <span class="nav-glyph" aria-hidden="true">▣</span><span>Cài Đặt WEB</span>
+        </button>
+        <a class="header-nav-item" href="#source"><span class="nav-glyph" aria-hidden="true">▤</span><span>Nguồn Bài</span></a>
+        <a class="header-nav-item" href="#queue"><span class="nav-glyph" aria-hidden="true">◎</span><span>Hàng Đợi</span></a>
+        <a class="header-nav-item" href="#composer"><span class="nav-glyph" aria-hidden="true">✎</span><span>Soạn Bình Luận</span></a>
+        <a class="header-nav-item" href="#templates"><span class="nav-glyph" aria-hidden="true">◇</span><span>Kho Mẫu</span></a>
+        <a class="header-nav-item" href="#records"><span class="nav-glyph" aria-hidden="true">▥</span><span>Kết Quả</span></a>
       </nav>
-
-      <a class="header-settings" href="#settings" title="Mở khu vực cài đặt">
-        <span aria-hidden="true">⚙</span>
-        <span>Cài đặt</span>
-      </a>
     </div>
   </header>
 
   <main class="app-shell" id="top">
-    <section class="hero-card card" aria-labelledby="pageTitle">
-      <div class="hero-copy">
-        <span class="eyebrow"><span aria-hidden="true">●</span> WEB + EXTENSION + CHATGPT API</span>
-        <h1 id="pageTitle">Tự động hóa bình luận Facebook<br><span>gọn trong một quy trình.</span></h1>
-        <p>Quét nhóm, lọc trùng link, đọc bài viết, tạo bình luận bằng AI và gửi sang Facebook. Mỗi bước được sắp xếp đúng theo thứ tự vận hành để dễ theo dõi.</p>
-        <div class="hero-pills" role="group" aria-label="Các tính năng chính">
-          <span>✓ Lọc trùng tự động</span>
-          <span>✓ Hàng đợi rõ ràng</span>
-          <span>✓ Lưu kết quả theo trạng thái</span>
+    <section class="system-dashboard card" id="systemDashboard" aria-labelledby="pageTitle">
+      <h1 class="sr-only" id="pageTitle">Trần Quý Trường — AI Auto Comment Facebook</h1>
+
+      <div class="system-monitor-column">
+        <div class="system-monitor">
+          <div class="monitor-toolbar" aria-hidden="true">
+            <span></span><span></span><span></span>
+            <strong>AI AUTO COMMENT / LIVE PROCESS</strong>
+          </div>
+          <div class="monitor-screen">
+            <div class="terminal-panel" aria-live="polite" aria-atomic="false">
+              <div class="terminal-command"><span>$</span> autovip --target facebook --mode comment</div>
+              <div class="terminal-log" id="systemTerminalLog">
+                <div class="terminal-line is-ok"><span>&gt;</span><em>Khởi tạo giao diện hệ thống...</em><b>[OK]</b></div>
+                <div class="terminal-line is-running"><span>&gt;</span><em>Đang kết nối luồng tự động...</em><b>[RUNNING]</b></div>
+              </div>
+              <div class="terminal-progress" aria-label="Tiến độ hoạt động">
+                <span>&gt; Tiến độ:</span>
+                <div class="terminal-progress-track"><i id="systemProgressBar"></i></div>
+                <strong id="systemProgressText">0%</strong>
+              </div>
+            </div>
+
+            <div class="cat-typing-scene" aria-label="Mèo đang gõ bàn phím">
+              <div class="cat-screen-glow" aria-hidden="true"></div>
+              <img class="cat-typing-image" src="./cat-typing.png?v=20260721-140" alt="Mèo đang gõ bàn phím">
+              <span class="typing-paw typing-paw-left" aria-hidden="true"></span>
+              <span class="typing-paw typing-paw-right" aria-hidden="true"></span>
+              <span class="typing-key typing-key-left" aria-hidden="true"></span>
+              <span class="typing-key typing-key-right" aria-hidden="true"></span>
+            </div>
+          </div>
         </div>
+        <div class="monitor-stand" aria-hidden="true"><span></span><i></i></div>
       </div>
 
-      <div class="hero-side">
+      <aside class="system-side-panel">
+        <section class="system-clock-card" aria-label="Đồng hồ hệ thống Việt Nam">
+          <div class="system-card-title"><span class="clock-icon" aria-hidden="true">◷</span> Đồng Hồ Hệ Thống</div>
+          <time class="system-clock-time" id="systemClock" datetime="">00:00:00</time>
+          <div class="system-clock-meta">
+            <time id="systemDate" datetime="">--/--/----</time>
+            <span id="systemWeekday">---</span>
+          </div>
+        </section>
+
         <div class="facebook-account-bar" id="facebookAccountBar" aria-live="polite">
           <div class="facebook-account-main">
             <div class="facebook-account-icon" aria-hidden="true">f</div>
             <div class="facebook-account-text">
-              <span class="facebook-account-label">Tài khoản Facebook</span>
+              <span class="facebook-account-label">Tài Khoản Facebook</span>
               <strong id="facebookUidDisplay">Đang lấy UID từ Extension...</strong>
             </div>
           </div>
-          <button class="btn btn-danger btn-sm" id="facebookLogoutBtn" type="button" disabled>Đăng xuất</button>
+          <button class="btn btn-danger btn-sm" id="facebookLogoutBtn" type="button" disabled>Đăng Xuất</button>
         </div>
 
-        <div class="hero-process" role="group" aria-label="Trình tự hoạt động">
-          <div><span>01</span><strong>Lấy link</strong></div>
+        <div class="hero-process" id="systemProcessSteps" role="group" aria-label="Trình tự hoạt động">
+          <div class="process-step is-active" data-process-step="scan"><span>01</span><strong>Lấy Link</strong></div>
           <i aria-hidden="true">→</i>
-          <div><span>02</span><strong>AI xử lý</strong></div>
+          <div class="process-step" data-process-step="ai"><span>02</span><strong>AI Xử Lý</strong></div>
           <i aria-hidden="true">→</i>
-          <div><span>03</span><strong>Bình luận</strong></div>
+          <div class="process-step" data-process-step="comment"><span>03</span><strong>Bình Luận</strong></div>
         </div>
-      </div>
+      </aside>
     </section>
 
-    <details class="advanced-panel card" id="settings">
-      <summary>
-        <span class="summary-icon" aria-hidden="true">⚙</span>
-        <span class="summary-copy">
-          <strong>Cài đặt hệ thống</strong>
-          <small>API ChatGPT, Apify, đổi tài khoản và thời gian vòng chạy</small>
-        </span>
-        <span class="summary-state">Mở cài đặt</span>
-        <span class="summary-chevron" aria-hidden="true">+</span>
-      </summary>
-
-      <div class="advanced-content">
-        <section class="advanced-section advanced-wide">
-          <div class="advanced-title"><span aria-hidden="true">✦</span> API ChatGPT</div>
-          <div class="auth-bar auth-bar-advanced">
-            <div class="auth-left">
-              <div class="auth-avatar" id="authAvatar" aria-hidden="true">🔌</div>
-              <div class="auth-info">
-                <div class="auth-status" id="authStatus">⚠️ Chưa nhập API key ChatGPT</div>
-                <div class="auth-username hidden" id="authUsername"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="bridge-grid bridge-grid-3">
-            <div class="form-group">
-              <label for="chatApiEndpointInput">API URL</label>
-              <input type="text" id="chatApiEndpointInput" value="https://console.flatkey.ai/v1/chat/completions" spellcheck="false">
-            </div>
-            <div class="form-group">
-              <label for="chatApiModelInput">Model</label>
-              <select id="chatApiModelInput">
-                <option value="gpt-4.1-mini">gpt-4.1-mini</option>
-                <option value="gpt-5.4-mini">gpt-5.4-mini</option>
-                <option value="gpt-5-mini">gpt-5-mini</option>
-              </select>
-            </div>
-            <div class="form-group api-key-group">
-              <label for="chatApiKeyInput">API key</label>
-              <div class="api-key-field">
-                <span class="api-key-icon" aria-hidden="true">⌘</span>
-                <input type="password" id="chatApiKeyInput" placeholder="Dán API key dạng sk-..." autocomplete="new-password" spellcheck="false">
-                <button class="api-key-toggle" id="chatApiKeyToggle" type="button" aria-label="Hiện API key" title="Hiện API key">👁</button>
-              </div>
-            </div>
-          </div>
-          <div class="hint">Web gọi trực tiếp endpoint Chat Completions bằng header Authorization: Bearer API_KEY. API key được lưu trong localStorage của trình duyệt.</div>
-
-          <div class="notice" id="tokenBanner" role="alert">
-            <div aria-hidden="true">⚠️</div>
-            <div><strong>API ChatGPT đang lỗi hoặc bị giới hạn</strong>Hãy kiểm tra API key, model, endpoint hoặc quota của tài khoản API.</div>
-          </div>
-        </section>
-
-        <section class="advanced-section">
-          <div class="advanced-title"><span aria-hidden="true">↻</span> Đổi tài khoản Facebook</div>
-          <div class="form-group">
-            <label for="facebookCookiesInput">Cookie Facebook</label>
-            <textarea id="facebookCookiesInput" spellcheck="false" placeholder="Mỗi dòng một cookie Facebook. Hỗ trợ cookie thuần hoặc UID|cookie|user-agent."></textarea>
-            <div class="hint">Khi UID đã đăng xuất, hệ thống lấy dòng đầu tiên, xóa khỏi danh sách, gửi sang Extension và tiếp tục chạy bằng UID mới.</div>
-          </div>
-        </section>
-
-        <section class="advanced-section">
-          <div class="advanced-title"><span aria-hidden="true">⌁</span> API Apify lấy bài viết</div>
-          <div class="form-group">
-            <label for="apifyActorIdInput">Apify Actor ID</label>
-            <select id="apifyActorIdInput">
-              <option value="powerful_bachelor~facebook-group-scraper">powerful_bachelor/Facebook-Group-Scraper</option>
-              <option value="caprolok~facebook-groups-scraper" selected>caprolok/facebook-groups-scraper</option>
-            </select>
-            <div class="hint">Nếu Actor trả bản ghi sai định dạng post_url, hệ thống thử Actor còn lại. Dataset rỗng được coi là vòng không có bài mới, không phải lỗi.</div>
-          </div>
-          <div class="form-group api-key-group">
-            <label for="apifyApiTokenInput">Apify API token</label>
-            <div class="api-key-field">
-              <span class="api-key-icon" aria-hidden="true">⌘</span>
-              <input type="password" id="apifyApiTokenInput" placeholder="Dán token dạng apify_api_..." autocomplete="new-password" spellcheck="false">
-              <button class="api-key-toggle" id="apifyApiTokenToggle" type="button" aria-label="Hiện Apify token" title="Hiện Apify token">👁</button>
-            </div>
-            <div class="hint">Token được lưu trong localStorage. Actor lấy từ ô phía trên.</div>
-          </div>
-        </section>
-
-        <section class="advanced-section">
-          <div class="advanced-title"><span aria-hidden="true">⇅</span> Nguồn và giới hạn quét</div>
-          <div class="form-group">
-            <label for="scanSourceModeSelect">Nguồn quét link</label>
-            <select id="scanSourceModeSelect">
-              <option value="group_latest">Bài viết mới — sắp xếp theo thời gian</option>
-              <option value="group_top">Bài viết Top — sắp xếp theo nổi bật</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="groupLimitInput">Số link lấy mỗi nhóm</label>
-            <input id="groupLimitInput" type="number" min="1" max="50" step="1" value="5">
-            <div class="hint">Mặc định lấy 5 link cho mỗi nhóm.</div>
-          </div>
-        </section>
-
-        <section class="advanced-section">
-          <div class="advanced-title"><span aria-hidden="true">◷</span> Thời gian vòng chạy</div>
-          <div class="bridge-grid">
-            <div class="form-group">
-              <label for="loopPauseSecondsInput">Nghỉ sau mỗi vòng (giây)</label>
-              <input id="loopPauseSecondsInput" type="number" min="0" max="86400" step="1" value="240">
-            </div>
-            <div class="form-group">
-              <label for="linkPauseSecondsInput">Nghỉ sau mỗi link (giây)</label>
-              <input id="linkPauseSecondsInput" type="number" min="0" max="86400" step="1" value="60">
-            </div>
-          </div>
-        </section>
-
-      </div>
-    </details>
-<br>
     <div class="workflow-stack">
       <section class="workflow-panel card" id="source" aria-labelledby="autoRunTitle">
         <div class="panel-heading">
@@ -402,10 +314,151 @@
   </main>
 
   <footer class="app-footer">
-    <div><span class="brand-logo small" aria-hidden="true">🤖</span><strong>AutoVIP</strong></div>
+    <div><span class="brand-logo brand-image small" aria-hidden="true"><img src="./favicon-192x192.png" alt=""></span><strong>Trần Quý Trường</strong></div>
     <p>AI Auto Comment Facebook · Web + Extension + API</p>
     <span class="system-online"><i aria-hidden="true"></i> Giao diện sẵn sàng</span>
   </footer>
+
+  <div class="modal-overlay settings-overlay" id="apiSettingsModal" role="dialog" aria-modal="true" aria-labelledby="apiSettingsTitle">
+    <div class="modal settings-modal settings-modal-wide">
+      <div class="modal-heading settings-modal-heading">
+        <span class="summary-icon" aria-hidden="true">☷</span>
+        <div>
+          <h2 id="apiSettingsTitle">Cài Đặt API</h2>
+          <p>API ChatGPT, API Apify và nguồn lấy bài viết</p>
+        </div>
+      </div>
+
+      <div class="settings-grid settings-grid-api">
+        <section class="advanced-section settings-section settings-wide">
+          <div class="advanced-title"><span aria-hidden="true">✦</span> API ChatGPT</div>
+          <div class="auth-bar auth-bar-advanced">
+            <div class="auth-left">
+              <div class="auth-avatar" id="authAvatar" aria-hidden="true">🔌</div>
+              <div class="auth-info">
+                <div class="auth-status" id="authStatus">⚠️ Chưa nhập API key ChatGPT</div>
+                <div class="auth-username hidden" id="authUsername"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bridge-grid bridge-grid-3">
+            <div class="form-group">
+              <label for="chatApiEndpointInput">API URL</label>
+              <input type="text" id="chatApiEndpointInput" value="https://console.flatkey.ai/v1/chat/completions" spellcheck="false">
+            </div>
+            <div class="form-group">
+              <label for="chatApiModelInput">Model</label>
+              <select id="chatApiModelInput">
+                <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+                <option value="gpt-5.4-mini">gpt-5.4-mini</option>
+                <option value="gpt-5-mini">gpt-5-mini</option>
+              </select>
+            </div>
+            <div class="form-group api-key-group">
+              <label for="chatApiKeyInput">API key</label>
+              <div class="api-key-field">
+                <span class="api-key-icon" aria-hidden="true">⌘</span>
+                <input type="password" id="chatApiKeyInput" placeholder="Dán API key dạng sk-..." autocomplete="new-password" spellcheck="false">
+                <button class="api-key-toggle" id="chatApiKeyToggle" type="button" aria-label="Hiện API key" title="Hiện API key">👁</button>
+              </div>
+            </div>
+          </div>
+          <div class="hint">Web gọi endpoint Chat Completions bằng API key và lưu cấu hình trong trình duyệt.</div>
+
+          <div class="notice" id="tokenBanner" role="alert">
+            <div aria-hidden="true">⚠️</div>
+            <div><strong>API ChatGPT đang lỗi hoặc bị giới hạn</strong>Hãy kiểm tra API key, model, endpoint hoặc quota của tài khoản API.</div>
+          </div>
+        </section>
+
+        <section class="advanced-section settings-section">
+          <div class="advanced-title"><span aria-hidden="true">⌁</span> API Apify Lấy Bài Viết</div>
+          <div class="form-group">
+            <label for="apifyActorIdInput">Apify Actor ID</label>
+            <select id="apifyActorIdInput">
+              <option value="powerful_bachelor~facebook-group-scraper">powerful_bachelor/Facebook-Group-Scraper</option>
+              <option value="caprolok~facebook-groups-scraper" selected>caprolok/facebook-groups-scraper</option>
+            </select>
+            <div class="hint">Nếu Actor trả sai định dạng post_url, hệ thống thử Actor còn lại. Dataset rỗng là vòng không có bài mới.</div>
+          </div>
+          <div class="form-group api-key-group">
+            <label for="apifyApiTokenInput">Apify API token</label>
+            <div class="api-key-field">
+              <span class="api-key-icon" aria-hidden="true">⌘</span>
+              <input type="password" id="apifyApiTokenInput" placeholder="Dán token dạng apify_api_..." autocomplete="new-password" spellcheck="false">
+              <button class="api-key-toggle" id="apifyApiTokenToggle" type="button" aria-label="Hiện Apify token" title="Hiện Apify token">👁</button>
+            </div>
+            <div class="hint">Token được lưu trong trình duyệt và dùng với Actor đã chọn.</div>
+          </div>
+        </section>
+
+        <section class="advanced-section settings-section">
+          <div class="advanced-title"><span aria-hidden="true">⇅</span> Nguồn Và Giới Hạn Quét</div>
+          <div class="form-group">
+            <label for="scanSourceModeSelect">Nguồn quét link</label>
+            <select id="scanSourceModeSelect">
+              <option value="group_latest">Bài viết mới — sắp xếp theo thời gian</option>
+              <option value="group_top">Bài viết Top — sắp xếp theo nổi bật</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="groupLimitInput">Số link lấy mỗi nhóm</label>
+            <input id="groupLimitInput" type="number" min="1" max="50" step="1" value="5">
+            <div class="hint">Cho phép từ 1 đến 50 link cho mỗi nhóm.</div>
+          </div>
+        </section>
+      </div>
+
+      <div class="modal-btns settings-modal-actions">
+        <button class="btn btn-primary" id="saveApiSettingsBtn" type="button">Lưu Cài Đặt</button>
+        <button class="btn btn-secondary" id="cancelApiSettingsBtn" type="button">Huỷ</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay settings-overlay" id="webSettingsModal" role="dialog" aria-modal="true" aria-labelledby="webSettingsTitle">
+    <div class="modal settings-modal settings-modal-wide">
+      <div class="modal-heading settings-modal-heading">
+        <span class="summary-icon" aria-hidden="true">▣</span>
+        <div>
+          <h2 id="webSettingsTitle">Cài Đặt WEB</h2>
+          <p>Đổi tài khoản Facebook và thời gian vòng chạy</p>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+        <section class="advanced-section settings-section">
+          <div class="advanced-title"><span aria-hidden="true">↻</span> Đổi Tài Khoản Facebook</div>
+          <div class="form-group">
+            <label for="facebookCookiesInput">Cookie Facebook</label>
+            <textarea id="facebookCookiesInput" spellcheck="false" placeholder="Mỗi dòng một cookie Facebook. Hỗ trợ cookie thuần hoặc UID|cookie|user-agent."></textarea>
+            <div class="hint">Khi UID đã đăng xuất, hệ thống lấy dòng đầu, xóa khỏi danh sách, gửi sang Extension và tiếp tục bằng UID mới.</div>
+          </div>
+        </section>
+
+        <section class="advanced-section settings-section">
+          <div class="advanced-title"><span aria-hidden="true">◷</span> Thời Gian Vòng Chạy</div>
+          <div class="bridge-grid">
+            <div class="form-group">
+              <label for="loopPauseSecondsInput">Nghỉ sau mỗi vòng (giây)</label>
+              <input id="loopPauseSecondsInput" type="number" min="0" max="86400" step="1" value="240">
+            </div>
+            <div class="form-group">
+              <label for="linkPauseSecondsInput">Nghỉ sau mỗi link (giây)</label>
+              <input id="linkPauseSecondsInput" type="number" min="0" max="86400" step="1" value="60">
+            </div>
+          </div>
+          <div class="hint">Giá trị 0 sẽ chuyển ngay sang link hoặc vòng tiếp theo. Tối đa 86.400 giây.</div>
+        </section>
+      </div>
+
+      <div class="modal-btns settings-modal-actions">
+        <button class="btn btn-primary" id="saveWebSettingsBtn" type="button">Lưu Cài Đặt</button>
+        <button class="btn btn-secondary" id="cancelWebSettingsBtn" type="button">Huỷ</button>
+      </div>
+    </div>
+  </div>
 
   <div class="modal-overlay" id="templateModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal">
@@ -442,5 +495,6 @@
   <script src="bridge-api.js?v=20260720-113"></script>
   <script src="apify-api.js?v=20260721-130"></script>
   <script src="bridge-workflow.js?v=20260721-130"></script>
+  <script src="dashboard-v1.4.0.js?v=20260721-140-system-dashboard"></script>
 </body>
 </html>

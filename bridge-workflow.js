@@ -292,7 +292,7 @@
     }
 
     if (!getFacebookCookieLines().length) {
-      const error = new Error('Chưa có UID Facebook đăng nhập và ô Cookie Facebook trong Cài đặt nâng cao đang trống.');
+      const error = new Error('Chưa có UID Facebook đăng nhập và ô Cookie Facebook trong Cài Đặt WEB đang trống.');
       error.code = 'FACEBOOK_ACCOUNT_AND_COOKIE_MISSING';
       throw error;
     }
@@ -486,9 +486,9 @@
     const actorId = S.getApifyActorId();
     const token = S.getApifyToken();
     if (!token) {
-      S.setBridgeStatus('Hãy nhập Apify API token trong Cài đặt nâng cao.', 'warn');
+      S.setBridgeStatus('Hãy nhập Apify API token trong Cài Đặt API.', 'warn');
       B.apifyApiTokenInput?.focus();
-      const error = new Error('Chưa nhập Apify API token trong Cài đặt nâng cao.');
+      const error = new Error('Chưa nhập Apify API token trong Cài Đặt API.');
       error.code = 'APIFY_TOKEN_MISSING';
       throw error;
     }

@@ -990,3 +990,14 @@
 .monitor-screen::before {
   display: none !important;
 }
+/* Làm trong suốt toàn bộ màn hình terminal */
+.system-monitor,
+.monitor-screen,
+.monitor-toolbar {
+  background: transparent !important;
+}
+
+/* Bỏ lớp bóng tối bên trong màn hình */
+.system-monitor {
+  box-shadow: none !important;
+}

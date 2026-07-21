@@ -16,6 +16,39 @@
   let facebookAccountStateInitialized = false;
   let lastFacebookLoggedIn = false;
 
+  const CLOSED_LOOP_FATAL_CODES = new Set([
+    'APIFY_MODULE_MISSING',
+    'APIFY_TOKEN_MISSING',
+    'APIFY_ACTOR_ID_INVALID',
+    'APIFY_GROUPS_EMPTY',
+    'APIFY_HTTP_401',
+    'APIFY_HTTP_402',
+    'APIFY_HTTP_403',
+    'FACEBOOK_ACCOUNT_AND_COOKIE_MISSING',
+    'FACEBOOK_FEATURE_RESTRICTED'
+  ]);
+
+  function classifyApifyError(error) {
+    if (typeof APIFY?.classifyError === 'function') return APIFY.classifyError(error);
+    return {
+      type: CLOSED_LOOP_FATAL_CODES.has(S.text(error?.code)) ? 'fatal' : 'retryable',
+      code: S.text(error?.code) || 'APIFY_TEMPORARY_ERROR',
+      message: error?.message || String(error)
+    };
+  }
+
+  function isFatalClosedLoopError(error) {
+    if (error?.stopClosedLoop === true) return true;
+    if (CLOSED_LOOP_FATAL_CODES.has(S.text(error?.code))) return true;
+    return /^APIFY_/i.test(S.text(error?.code)) && classifyApifyError(error).type === 'fatal';
+  }
+
+  function markClosedLoopFatal(error) {
+    const fatalError = error instanceof Error ? error : new Error(String(error || 'Lỗi nghiêm trọng.'));
+    fatalError.stopClosedLoop = true;
+    return fatalError;
+  }
+
   function updateKnownFacebookAccount(loggedIn, uid) {
     const previousLoggedIn = lastFacebookLoggedIn;
     const wasInitialized = facebookAccountStateInitialized;
@@ -320,7 +353,57 @@
     return labels[mode] || labels.group_latest;
   }
 
-  async function scanGroupLinksByExtension() {
+  async function preloadRakkoCaptions(links) {
+    const queue = Array.isArray(links) ? links.filter(Boolean) : [];
+    if (!queue.length) {
+      S.setPostCaptions([]);
+      return { saved: 0, failed: 0 };
+    }
+
+    const records = [];
+    const failed = [];
+    let nextIndex = 0;
+    let completed = 0;
+
+    const worker = async () => {
+      while (nextIndex < queue.length) {
+        const currentIndex = nextIndex;
+        nextIndex += 1;
+        const link = queue[currentIndex];
+        try {
+          const response = await API.sendBridge(
+            ['READ_FB_POST_TITLE', 'READ_FB_POST', 'READ_FACEBOOK_POST', 'readFbPost', 'readFacebookPost', 'READ_POST'],
+            {
+              url: link,
+              link,
+              timeoutMs: 30000,
+              useRakko: true,
+              keepOpen: false,
+              closeAfter: true
+            }
+          );
+          const caption = API.extractArticleFromResponse(response);
+          if (caption) records.push({ url: link, caption });
+          else failed.push({ link, error: 'Rakko không trả description.' });
+        } catch (error) {
+          failed.push({ link, error: error?.message || String(error) });
+        } finally {
+          completed += 1;
+          S.setBridgeStatus(
+            `Đã quét link trên tab Facebook. Rakko đang đọc description ${completed}/${queue.length}...`,
+            'warn'
+          );
+        }
+      }
+    };
+
+    const workerCount = Math.min(2, queue.length);
+    await Promise.all(Array.from({ length: workerCount }, () => worker()));
+    const saved = S.setPostCaptions(records);
+    return { saved, failed: failed.length, failures: failed };
+  }
+
+  async function scanGroupLinksByExtension({ preloadRakko = true } = {}) {
     const groups = S.parseLines(B.fbGroupIdInput?.value);
     if (!groups.length) {
       S.setBridgeStatus('Hãy nhập UID hoặc link nhóm Facebook trước.', 'warn');
@@ -333,7 +416,10 @@
     const groupLimit = S.getGroupLimit();
     const scanMode = S.getScanSourceMode();
     const modeLabel = scanModeLabel(scanMode);
-    S.setBridgeStatus(`Đang dùng bộ quét của autogpt-main để lấy ${modeLabel}, tối đa ${groupLimit} link mỗi nhóm...`, 'warn');
+    S.setBridgeStatus(
+      `Đang mở tab Facebook mới để quét thủ công ${modeLabel}, tối đa ${groupLimit} link mỗi nhóm...`,
+      'warn'
+    );
 
     const response = await API.sendBridge(
       ['SCAN_GROUP_PERMALINKS', 'SCAN_GROUP_LINKS', 'scanGroupLinks', 'SCAN_GROUP', 'scan_links', 'SCAN_LINKS'],
@@ -348,6 +434,8 @@
         perGroupLimit: groupLimit,
         onlyPermalink: true,
         newestFirst: scanMode === 'group_latest',
+        manualScan: true,
+        scanStrategy: 'manual_tab_rakko',
         openInBackground: false,
         active: true,
         activateTab: true,
@@ -359,6 +447,9 @@
     const links = filtered.links;
     S.setPostCaptions([]);
     S.setPostLinks(links);
+    const rakko = links.length && preloadRakko
+      ? await preloadRakkoCaptions(links)
+      : { saved: 0, failed: 0 };
     const queuedLinks = S.getPostLinks();
     const historyText = filtered.duplicateHistoryCount
       ? ` Đã xóa ${filtered.duplicateHistoryCount} link trùng lịch sử (${filtered.duplicateCommented.length} đã bình luận, ${filtered.duplicateRemoved.length} đã loại bỏ).`
@@ -366,18 +457,22 @@
 
     if (links.length) {
       S.setBridgeStatus(
-        `Bộ quét Extension đã lấy ${links.length} link ${modeLabel} không trùng và hiển thị trong hàng đợi.${historyText} Tổng hàng đợi hiện có ${queuedLinks.length} link.`,
+        `Quét thủ công đã mở tab Facebook mới và lấy ${links.length} link ${modeLabel} không trùng.${historyText} Rakko đã đọc được ${rakko.saved}/${links.length} description${rakko.failed ? `; ${rakko.failed} link sẽ tự gọi lại Rakko khi xử lý` : ''}. Hàng đợi hiện có ${queuedLinks.length} link.`,
         'ok'
       );
     } else {
-      S.setBridgeStatus(`Bộ quét Extension không có link ${modeLabel} mới sau khi đối chiếu hai danh sách lịch sử.${historyText}`, 'warn');
+      S.setBridgeStatus(`Đã mở và quét xong tab Facebook nhưng không có link ${modeLabel} mới sau khi đối chiếu hai danh sách lịch sử.${historyText}`, 'warn');
     }
 
     return links;
   }
 
   async function scanGroupLinksByApify() {
-    if (!APIFY?.fetchPostUrls) throw new Error('Chưa nạp được module Apify API.');
+    if (!APIFY?.fetchPostUrls) {
+      const error = new Error('Chưa nạp được module Apify API.');
+      error.code = 'APIFY_MODULE_MISSING';
+      throw error;
+    }
 
     const groups = S.parseLines(B.fbGroupIdInput?.value);
     if (!groups.length) {
@@ -420,33 +515,38 @@
         );
       }
     });
-    const workingActorId = S.setApifyActorId(result.actorId);
+    const groupResults = Array.isArray(result.groupResults) ? result.groupResults : [];
+    const hasValidActorLinks = Array.isArray(result.links) && result.links.length > 0;
+    const workingActorId = hasValidActorLinks ? S.setApifyActorId(result.actorId) : actorId;
     const workingActorLabel = APIFY.getActorLabel(workingActorId);
-    const actorStatusText = result.switchedActor
-      ? ` Đã tự chuyển sang ${workingActorLabel} và lưu làm Actor mặc định cho lần chạy sau.`
-      : ` Actor ${workingActorLabel} hoạt động và đã được lưu cho lần chạy sau.`;
+    const responseActorLabel = APIFY.getActorLabel(result.actorId || actorId);
+    const actorStatusText = !hasValidActorLinks
+      ? ` Actor ${responseActorLabel} đã phản hồi nhưng không có link hợp lệ; hệ thống giữ nguyên Actor đang chọn.`
+      : (result.switchedActor
+        ? ` Đã tự chuyển sang ${workingActorLabel} và lưu làm Actor mặc định cho lần chạy sau.`
+        : ` Actor ${workingActorLabel} hoạt động và đã được lưu cho lần chạy sau.`);
 
     const filtered = S.filterLinksAgainstHistory(result.links);
     const links = filtered.links;
-    const postUrlFieldCount = result.groupResults.reduce(
+    const postUrlFieldCount = groupResults.reduce(
       (total, groupResult) => total + (Number(groupResult.postUrlFieldCount) || 0),
       0
     );
-    const reconstructedPostUrlCount = result.groupResults.reduce(
+    const reconstructedPostUrlCount = groupResults.reduce(
       (total, groupResult) => total + (Number(groupResult.reconstructedPostUrlCount) || 0),
       0
     );
-    const invalidPostUrlCount = result.groupResults.reduce(
+    const invalidPostUrlCount = groupResults.reduce(
       (total, groupResult) => total + (Number(groupResult.invalidPostUrlCount) || 0),
       0
     );
-    const duplicatePostUrlCount = result.groupResults.reduce(
+    const duplicatePostUrlCount = groupResults.reduce(
       (total, groupResult) => total + (Number(groupResult.duplicatePostUrlCount) || 0),
       0
     );
     const postUrlDetailText = ` Đã chuyển đổi ${reconstructedPostUrlCount} link định dạng khác; sai định dạng ${invalidPostUrlCount}; trùng trong kết quả Apify ${duplicatePostUrlCount}.`;
     const acceptedLinkKeys = new Set(links.map(S.normalizeUrl));
-    const captionRecords = (result.posts || []).filter(post => acceptedLinkKeys.has(S.normalizeUrl(post.url)));
+    const captionRecords = (Array.isArray(result.posts) ? result.posts : []).filter(post => acceptedLinkKeys.has(S.normalizeUrl(post.url)));
     const savedCaptionCount = S.setPostCaptions(captionRecords);
     S.setPostLinks(links);
     const queuedLinks = S.getPostLinks();
@@ -456,8 +556,13 @@
 
     if (links.length) {
       S.setBridgeStatus(
-        `Apify đã quét riêng ${result.groupResults.length} nhóm theo nguồn ${modeLabel}, nhận ${result.itemCount} bản ghi, đọc ${postUrlFieldCount} giá trị post_url và giữ ${links.length} URL /permalink/ không trùng. Đã ghép ${savedCaptionCount}/${links.length} caption với đúng link.${postUrlDetailText}${historyText}${actorStatusText} Hàng đợi mới đã thay thế kết quả vòng trước và hiện có ${queuedLinks.length} link.`,
+        `Apify đã quét riêng ${groupResults.length} nhóm theo nguồn ${modeLabel}, nhận ${result.itemCount} bản ghi, đọc ${postUrlFieldCount} giá trị post_url và giữ ${links.length} URL /permalink/ không trùng. Đã ghép ${savedCaptionCount}/${links.length} caption với đúng link.${postUrlDetailText}${historyText}${actorStatusText} Hàng đợi mới đã thay thế kết quả vòng trước và hiện có ${queuedLinks.length} link.`,
         'ok'
+      );
+    } else if (result.noLinksReason === 'no_valid_post_urls') {
+      S.setBridgeStatus(
+        `Apify trả về ${result.itemCount} bản ghi nhưng cả hai Actor đều không có post_url hợp lệ. Vòng này được coi là không có link, hệ thống sẽ nghỉ rồi tự quét tiếp.${actorStatusText}`,
+        'warn'
       );
     } else if (result.itemCount > 0) {
       S.setBridgeStatus(
@@ -465,30 +570,41 @@
         'warn'
       );
     } else {
-      S.setBridgeStatus('Apify chạy xong nhưng không trả về bài viết nào.', 'warn');
+      S.setBridgeStatus(`Apify chạy thành công nhưng vòng này không có bài viết mới. Đây là trạng thái bình thường.${actorStatusText}`, 'warn');
     }
 
     return links;
   }
 
   async function scanGroupLinks({ preferApify = true } = {}) {
-    const token = S.getApifyToken();
-    if (preferApify && token) {
-      try {
-        return await scanGroupLinksByApify();
-      } catch (error) {
-        S.setBridgeStatus(
-          `Apify không lấy được URL (${error.message || error}). Đang chuyển sang bộ quét nhóm trực tiếp của autogpt-main...`,
-          'warn'
-        );
-        return await scanGroupLinksByExtension();
-      }
-    }
+    if (!preferApify) return await scanGroupLinksByExtension({ preloadRakko: true });
 
-    if (preferApify && !token) {
-      S.setBridgeStatus('Chưa có Apify token. Hệ thống chuyển sang bộ quét nhóm trực tiếp của autogpt-main...', 'warn');
+    try {
+      return await scanGroupLinksByApify();
+    } catch (error) {
+      const classification = classifyApifyError(error);
+      S.setPostCaptions([]);
+      S.setPostLinks([]);
+
+      if (classification.type === 'fatal') {
+        S.setBridgeStatus(
+          `Đã dừng vì lỗi cấu hình/xác thực Apify (${classification.code}): ${classification.message}`,
+          'error'
+        );
+        throw markClosedLoopFatal(error);
+      }
+
+      if (classification.type === 'no_links') {
+        S.setBridgeStatus('Apify chạy thành công nhưng vòng này không có link mới. Hệ thống sẽ nghỉ rồi tự quét vòng tiếp theo.', 'warn');
+        return [];
+      }
+
+      S.setBridgeStatus(
+        `Apify gặp lỗi tạm thời (${classification.code}): ${classification.message} Vòng hiện tại được bỏ qua; hệ thống sẽ nghỉ rồi tự thử lại, không dừng.`,
+        'warn'
+      );
+      return [];
     }
-    return await scanGroupLinksByExtension();
   }
 
 
@@ -545,11 +661,11 @@
     if (caption) {
       await closeActiveReadTabIfAny();
       const article = setArticleInputContent(caption);
-      S.setBridgeStatus('Đã lấy caption từ dữ liệu Apify và điền vào ô Nội dung bài viết gốc; không gọi API đọc bài.', 'ok');
-      return { article, source: 'apify_caption' };
+      S.setBridgeStatus('Đã lấy nội dung đã ghép sẵn từ Apify/Rakko và điền vào ô Nội dung bài viết gốc; không gọi API đọc lại.', 'ok');
+      return { article, source: 'cached_caption' };
     }
 
-    S.setBridgeStatus('Caption Apify của link này rỗng. Đang dùng API đọc bài cũ làm dự phòng...', 'warn');
+    S.setBridgeStatus('Nội dung ghép sẵn của link này đang rỗng. Đang gọi Rakko API làm dự phòng...', 'warn');
     const article = await readFirstFacebookPost(link);
     return { article, source: 'read_api_fallback' };
   }
@@ -715,11 +831,12 @@
     }
   }
 
-  async function waitBeforeNextGroupScan(cycleIndex) {
+  async function waitBeforeNextGroupScan(cycleIndex, reason = '') {
     const seconds = S.getLoopPauseSeconds();
     const totalMs = seconds * 1000;
+    const prefix = S.text(reason) || `Vòng ${cycleIndex} đã xong.`;
     if (totalMs <= 0) {
-      S.setBridgeStatus(`Vòng ${cycleIndex} đã xong. Nghỉ 0 giây, quét tiếp ngay...`, 'warn');
+      S.setBridgeStatus(`${prefix} Nghỉ 0 giây, quét tiếp ngay...`, 'warn');
       await S.delay(500);
       return;
     }
@@ -728,7 +845,7 @@
     while (S.isClosedLoopRunning() && Date.now() < endAt) {
       const remainMs = Math.max(0, endAt - Date.now());
       const remainSeconds = Math.ceil(remainMs / 1000);
-      S.setBridgeStatus(`Vòng ${cycleIndex} đã xong. Đang nghỉ ${remainSeconds} giây rồi quét tiếp...`, 'warn');
+      S.setBridgeStatus(`${prefix} Đang nghỉ ${remainSeconds} giây rồi tự quét vòng tiếp theo...`, 'warn');
       await S.delay(Math.min(1000, remainMs));
     }
   }
@@ -743,33 +860,38 @@
 
     try {
       while (S.isClosedLoopRunning()) {
+        let waitReason = `Vòng ${cycleIndex} đã hoàn tất.`;
         try {
           await ensureFacebookAccountBeforeCycle(cycleIndex);
-        } catch (error) {
-          fatalStopMessage = error.message || String(error);
-          S.setClosedLoopRunning(false);
-          S.setBridgeStatus(fatalStopMessage, 'error');
-          break;
-        }
-
-        S.setBridgeStatus(`Đang chạy vòng ${cycleIndex}...`, 'warn');
-        await scanGroupLinks({ preferApify: true });
-        if (!S.isClosedLoopRunning()) break;
-
-        const queuedLinks = S.getPostLinks();
-        if (!queuedLinks.length) {
-          S.setPostLinks([]);
+          S.setBridgeStatus(`Đang chạy vòng ${cycleIndex} bằng Apify API...`, 'warn');
+          await scanGroupLinks({ preferApify: true });
           if (!S.isClosedLoopRunning()) break;
-          await waitBeforeNextGroupScan(cycleIndex);
-          cycleIndex += 1;
-          continue;
+
+          const queuedLinks = S.getPostLinks();
+          if (!queuedLinks.length) {
+            S.setPostLinks([]);
+            waitReason = `Vòng ${cycleIndex} không có link mới; đây là trạng thái bình thường.`;
+          } else {
+            S.setBridgeStatus(`Vòng ${cycleIndex}: đã lọc xong link. Đang nạp nội dung của link đầu tiên...`, 'warn');
+            await autoWorkflow({ manageLoopState: false });
+            waitReason = `Vòng ${cycleIndex} đã xử lý xong hàng đợi.`;
+          }
+        } catch (error) {
+          if (isFatalClosedLoopError(error)) {
+            fatalStopMessage = error.message || String(error);
+            S.setClosedLoopRunning(false);
+            S.setBridgeStatus(fatalStopMessage, 'error');
+            break;
+          }
+
+          S.setPostCaptions([]);
+          S.setPostLinks([]);
+          waitReason = `Vòng ${cycleIndex} gặp lỗi tạm thời: ${error.message || error}. Tiến trình vẫn tiếp tục.`;
+          S.setBridgeStatus(waitReason, 'warn');
         }
 
-        S.setBridgeStatus(`Vòng ${cycleIndex}: đã lọc xong link. Đang nạp caption Apify của link đầu tiên...`, 'warn');
-        await autoWorkflow({ manageLoopState: false });
-
         if (!S.isClosedLoopRunning()) break;
-        await waitBeforeNextGroupScan(cycleIndex);
+        await waitBeforeNextGroupScan(cycleIndex, waitReason);
         cycleIndex += 1;
       }
     } finally {
@@ -840,7 +962,9 @@
       if (!document.hidden) refreshFacebookAccount({ silent: true });
     }, 2000);
 
-    B.apifyScanBtn?.addEventListener('click', () => runBridgeTask(() => scanGroupLinks({ preferApify: true })).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
+    B.apifyScanBtn?.addEventListener('click', () => runBridgeTask(
+      () => scanGroupLinksByExtension({ preloadRakko: true })
+    ).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
     B.scanGroupLinksBtn?.addEventListener('click', () => runBridgeTask(() => runClosedGroupLoop()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
     B.autoWorkflowBtn?.addEventListener('click', () => runBridgeTask(() => autoWorkflow()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
     B.commentCurrentTabBtn?.addEventListener('click', () => runBridgeTask(() => commentCurrentTab()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));

@@ -19,7 +19,7 @@
 
   <a class="announcement-bar" href="#workflow">
     <span class="announcement-badge">MỚI</span>
-    <span>Tự động lấy link bằng API, lọc trùng và điều khiển Extension theo một quy trình thống nhất.</span>
+    <span>Tự động bằng Apify, quét thủ công qua tab Facebook và đọc nội dung dự phòng bằng Rakko.</span>
     <strong>Xem quy trình ↓</strong>
   </a>
 
@@ -154,7 +154,7 @@
               <option value="powerful_bachelor~facebook-group-scraper">powerful_bachelor/Facebook-Group-Scraper</option>
               <option value="caprolok~facebook-groups-scraper" selected>caprolok/facebook-groups-scraper</option>
             </select>
-            <div class="hint">Nếu Actor đang chọn bị lỗi hoặc không trả được post_url, hệ thống tự thử Actor còn lại và lưu Actor hoạt động cho lần chạy sau.</div>
+            <div class="hint">Nếu Actor trả bản ghi sai định dạng post_url, hệ thống thử Actor còn lại. Dataset rỗng được coi là vòng không có bài mới, không phải lỗi.</div>
           </div>
           <div class="form-group api-key-group">
             <label for="apifyApiTokenInput">Apify API token</label>
@@ -208,10 +208,10 @@
             <div>
               <span class="section-kicker">NGUỒN BÀI VIẾT</span>
               <h2 id="autoRunTitle">Nhóm Facebook và chế độ chạy</h2>
-              <p>Nhập UID hoặc link nhóm. Hệ thống gọi Apify, chuẩn hóa URL và lọc trùng trước khi đưa vào hàng đợi.</p>
+              <p>Chạy tự động dùng Apify. Quét thủ công sẽ mở tab nhóm Facebook mới, lấy permalink rồi ghép description bằng Rakko.</p>
             </div>
           </div>
-          <span class="process-badge">Apify API → lọc trùng → hàng đợi</span>
+          <span class="process-badge">Apify tự động · Facebook + Rakko thủ công</span>
         </div>
 
         <div class="form-group">
@@ -226,11 +226,11 @@
             <button class="btn btn-danger hidden" id="stopClosedLoopBtn" type="button"><span aria-hidden="true">■</span> Dừng</button>
           </div>
           <div class="action-secondary-group">
-            <button class="btn btn-secondary" id="apifyScanBtn" type="button"><span aria-hidden="true">⌁</span> Chỉ lấy URL</button>
+            <button class="btn btn-secondary" id="apifyScanBtn" type="button"><span aria-hidden="true">⌁</span> Quét thủ công + Rakko</button>
             <button class="btn btn-secondary" id="autoWorkflowBtn" type="button"><span aria-hidden="true">▷</span> Chạy link hiện có</button>
           </div>
         </div>
-        <div class="automation-status" id="bridgeStatus">Sẵn sàng. Chạy tự động sẽ lấy URL bằng Apify API.</div>
+        <div class="automation-status" id="bridgeStatus">Sẵn sàng. Tự động dùng Apify; quét thủ công mở tab Facebook mới và dùng Rakko.</div>
       </section>
 
       <section class="workflow-panel card" id="queue" aria-labelledby="linksTitle">
@@ -438,9 +438,9 @@
 
   <script src="incokit-ui-v1.0.5.js?v=20260720-113"></script>
   <script src="chatgpt-api.js?v=20260720-113"></script>
-  <script src="bridge-state.js?v=20260721-120"></script>
+  <script src="bridge-state.js?v=20260721-130"></script>
   <script src="bridge-api.js?v=20260720-113"></script>
-  <script src="apify-api.js?v=20260721-120"></script>
-  <script src="bridge-workflow.js?v=20260721-120"></script>
+  <script src="apify-api.js?v=20260721-130"></script>
+  <script src="bridge-workflow.js?v=20260721-130"></script>
 </body>
 </html>

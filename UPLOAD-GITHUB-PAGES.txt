@@ -1,13 +1,13 @@
-AUTOVIP WEB — GIAO DIỆN INCOKIT + QUY TRÌNH AUTOGPT ĐẦY ĐỦ v1.1.5
+AUTOVIP WEB — VÒNG LẶP BỀN VỮNG + QUÉT THỦ CÔNG RAKKO v1.3.0
 
 1. Giải nén file ZIP.
 2. Tải TẤT CẢ file bên trong ZIP lên đúng thư mục /autovip/ đang chứa index.html trên GitHub Pages.
 3. Không tải cả thư mục cha lồng thêm một cấp.
-4. Ghi đè toàn bộ file cũ bằng toàn bộ file trong gói v1.1.5.
+4. Ghi đè toàn bộ file cũ bằng toàn bộ file trong gói v1.3.0.
 5. Đảm bảo incokit-workflow-v1.0.5.css và incokit-ui-v1.0.5.js nằm cùng cấp với index.html.
-6. Cài hoặc Reload extension Autovip Full v2.1.2 tại chrome://extensions.
+6. Cài hoặc Reload extension Autovip Full v2.2.0 tại chrome://extensions.
 7. Đóng tab Web Autovip cũ, mở lại:
-   https://tranquytruong0362683566-gif.github.io/autovip/?v=20260720-115
+   https://tranquytruong0362683566-gif.github.io/autovip/?v=20260721-130
 8. Nhấn Ctrl + Shift + R một lần.
 
 Web không còn ô Extension ID. Extension tự liên kết bằng content bridge chỉ trên đúng URL /autovip/.
@@ -22,7 +22,7 @@ THAY ĐỔI v1.0.5:
 THAY ĐỔI v1.1.0:
 - Giữ nguyên toàn bộ giao diện Incokit v1.0.5.
 - Ghép lại quy trình autogpt-main: quét link nhóm → đọc description → AI phân loại/tạo bình luận → gửi → theo dõi spam → đóng tab → lưu kết quả → nghỉ → lặp vòng.
-- Khi có Apify token, web ưu tiên lấy URL qua Apify; khi chưa có token, tự chuyển sang bộ quét nhóm trực tiếp trong Extension.
+- Luồng tự động dùng Apify; luồng quét trực tiếp trong Extension được giữ riêng cho nút quét thủ công.
 - Khôi phục đầy đủ action quét nhóm và đọc bài của Extension.
 - Đồng bộ UID, đăng xuất và đăng nhập Cookie trực tiếp giữa web và Extension.
 
@@ -51,3 +51,11 @@ THAY ĐỔI v1.1.5:
 - Giảm độ đục của toàn bộ thẻ, khung chức năng và khung cài đặt để nhìn rõ nền lưới phía sau.
 - Giảm độ đục của textarea, input, select, trạng thái, kết quả, mẫu và danh sách link bên trong các khung.
 - Giữ nguyên viền, chữ, bố cục và làm trạng thái hover/focus sáng hơn nền thường để dễ thao tác.
+
+THAY ĐỔI v1.3.0:
+- Apify trả dataset rỗng hoặc không có link mới được coi là trạng thái bình thường; vòng tự động nghỉ đúng thời gian cài đặt rồi quét tiếp.
+- Lỗi Apify tạm thời như timeout, mạng, HTTP 408/429/5xx không làm dừng vòng lặp; hệ thống bỏ qua vòng hiện tại và tự thử lại ở vòng sau.
+- Chỉ dừng vì lỗi Apify nghiêm trọng: thiếu/sai token, không có quyền, hết số dư, Actor/nhóm/cấu hình không hợp lệ.
+- Nút Quét thủ công + Rakko luôn mở tab nhóm Facebook mới ở trạng thái active, quét permalink, đóng tab rồi đọc description bằng Rakko API.
+- Quét thủ công không có link trả mã trạng thái bình thường, không còn báo lỗi Extension.
+- Giao diện popup Extension được thiết kế lại đồng nhất với màu sắc, thẻ và bố cục xanh đen của Web AutoVIP.

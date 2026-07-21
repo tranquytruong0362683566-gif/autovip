@@ -420,6 +420,63 @@
     return `Apify trả về HTTP ${status}.`;
   }
 
+  function collectErrorCodes(error, output = new Set(), seen = new Set()) {
+    if (!error || typeof error !== 'object' || seen.has(error)) return output;
+    seen.add(error);
+
+    const code = text(error.code);
+    if (code) output.add(code);
+    const status = Number(error.status || 0);
+    if (status) output.add(`APIFY_HTTP_${status}`);
+
+    for (const actorError of Array.isArray(error.actorErrors) ? error.actorErrors : []) {
+      collectErrorCodes(actorError?.error || actorError, output, seen);
+    }
+    if (error.cause) collectErrorCodes(error.cause, output, seen);
+    return output;
+  }
+
+  function classifyError(error) {
+    const codes = [...collectErrorCodes(error)];
+    const fatalCode = codes.find(code => [
+      'APIFY_MODULE_MISSING',
+      'APIFY_TOKEN_MISSING',
+      'APIFY_ACTOR_ID_INVALID',
+      'APIFY_GROUPS_EMPTY',
+      'APIFY_HTTP_401',
+      'APIFY_HTTP_402',
+      'APIFY_HTTP_403'
+    ].includes(code));
+
+    if (fatalCode) {
+      return {
+        type: 'fatal',
+        code: fatalCode,
+        codes,
+        message: error?.message || 'Cấu hình hoặc quyền truy cập Apify không hợp lệ.'
+      };
+    }
+
+    const actorErrors = Array.isArray(error?.actorErrors) ? error.actorErrors : [];
+    const allActorsHaveNoLinks = actorErrors.length > 0
+      && actorErrors.every(item => text(item?.error?.code || item?.code) === 'APIFY_ACTOR_NO_POST_URLS');
+    if (error?.noLinks === true || codes.includes('APIFY_NO_LINKS') || allActorsHaveNoLinks) {
+      return {
+        type: 'no_links',
+        code: 'APIFY_NO_LINKS',
+        codes,
+        message: error?.message || 'Apify chạy thành công nhưng vòng này không có link bài viết.'
+      };
+    }
+
+    return {
+      type: 'retryable',
+      code: codes[0] || 'APIFY_TEMPORARY_ERROR',
+      codes,
+      message: error?.message || 'Apify gặp lỗi tạm thời.'
+    };
+  }
+
   function extractItems(payload) {
     return Array.isArray(payload)
       ? payload
@@ -593,10 +650,19 @@
       try {
         const result = await fetchPostUrls({ ...options, actorId });
         if (!result.links.length) {
+          if (result.itemCount === 0) {
+            return {
+              ...result,
+              preferredActorId: actorCandidates[0],
+              switchedActor: actorId !== actorCandidates[0],
+              actorErrors,
+              noLinks: true,
+              noLinksReason: 'empty_dataset'
+            };
+          }
+
           const error = new Error(
-            result.itemCount > 0
-              ? `Actor ${getActorLabel(actorId)} trả ${result.itemCount} bản ghi nhưng không có post_url hợp lệ.`
-              : `Actor ${getActorLabel(actorId)} không trả về bản ghi nào.`
+            `Actor ${getActorLabel(actorId)} trả ${result.itemCount} bản ghi nhưng không có post_url hợp lệ.`
           );
           error.code = 'APIFY_ACTOR_NO_POST_URLS';
           error.actorId = actorId;
@@ -612,6 +678,29 @@
         };
       } catch (error) {
         actorErrors.push({ actorId, error });
+        if (classifyError(error).type === 'fatal') {
+          error.actorId = error.actorId || actorId;
+          error.actorErrors = [...actorErrors];
+          throw error;
+        }
+      }
+    }
+
+    const allActorsHaveNoLinks = actorErrors.length > 0
+      && actorErrors.every(item => text(item?.error?.code) === 'APIFY_ACTOR_NO_POST_URLS');
+    if (allActorsHaveNoLinks) {
+      const selected = [...actorErrors].reverse().find(item => item?.error?.result);
+      const result = selected?.error?.result;
+      if (result) {
+        return {
+          ...result,
+          actorId: selected.actorId,
+          preferredActorId: actorCandidates[0],
+          switchedActor: selected.actorId !== actorCandidates[0],
+          actorErrors,
+          noLinks: true,
+          noLinksReason: 'no_valid_post_urls'
+        };
       }
     }
 
@@ -637,6 +726,8 @@
     extractPostUrls,
     resolveSortBy,
     fetchPostUrls,
-    fetchPostUrlsWithFallback
+    fetchPostUrlsWithFallback,
+    collectErrorCodes,
+    classifyError
   };
 }());

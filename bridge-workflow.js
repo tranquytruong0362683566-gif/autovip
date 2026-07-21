@@ -15,6 +15,11 @@
   let autoRestartScheduled = false;
   let facebookAccountStateInitialized = false;
   let lastFacebookLoggedIn = false;
+  let lastFacebookUid = '';
+  let facebookNameRequestPromise = null;
+  let facebookNameRequestUid = '';
+  const facebookNamesByUid = new Map();
+  const facebookNameLastAttempt = new Map();
 
   const CLOSED_LOOP_FATAL_CODES = new Set([
     'APIFY_MODULE_MISSING',
@@ -52,9 +57,106 @@
   function updateKnownFacebookAccount(loggedIn, uid) {
     const previousLoggedIn = lastFacebookLoggedIn;
     const wasInitialized = facebookAccountStateInitialized;
-    lastFacebookLoggedIn = Boolean(loggedIn && S.text(uid));
+    const cleanUid = S.text(uid);
+    lastFacebookLoggedIn = Boolean(loggedIn && cleanUid);
+    lastFacebookUid = lastFacebookLoggedIn ? cleanUid : '';
     facebookAccountStateInitialized = true;
     return wasInitialized && previousLoggedIn && !lastFacebookLoggedIn;
+  }
+
+  function cleanFacebookName(value) {
+    const name = S.text(value).replace(/\s+/g, ' ');
+    if (!name || /^\d+$/.test(name) || name.length > 120) return '';
+    return name;
+  }
+
+  function extractFacebookName(data) {
+    if (!data || typeof data !== 'object') return '';
+    return cleanFacebookName(
+      data.name
+      || data.displayName
+      || data.facebookName
+      || data.profileName
+      || data.account?.name
+      || data.profile?.name
+    );
+  }
+
+  function setFacebookHello(loggedIn, uid, name = '', status = '') {
+    if (!B.facebookNameDisplay) return;
+    const cleanUid = S.text(uid);
+    const cleanName = cleanFacebookName(name) || facebookNamesByUid.get(cleanUid) || '';
+
+    if (!loggedIn || !cleanUid) {
+      B.facebookNameDisplay.textContent = 'Chưa đăng nhập Facebook';
+      return;
+    }
+
+    if (cleanName) {
+      B.facebookNameDisplay.textContent = cleanName;
+      return;
+    }
+
+    B.facebookNameDisplay.textContent = status || 'Đang nhận diện tên Facebook...';
+  }
+
+  function requestFacebookAccountName(uid, { forceRefresh = false } = {}) {
+    const cleanUid = S.text(uid);
+    if (!cleanUid) return Promise.resolve('');
+
+    const cachedName = facebookNamesByUid.get(cleanUid) || '';
+    if (cachedName && !forceRefresh) {
+      setFacebookHello(true, cleanUid, cachedName);
+      return Promise.resolve(cachedName);
+    }
+
+    if (facebookNameRequestPromise && facebookNameRequestUid === cleanUid) {
+      return facebookNameRequestPromise;
+    }
+
+    const lastAttempt = facebookNameLastAttempt.get(cleanUid) || 0;
+    if (!forceRefresh && Date.now() - lastAttempt < 60000) return Promise.resolve('');
+
+    facebookNameLastAttempt.set(cleanUid, Date.now());
+    facebookNameRequestUid = cleanUid;
+    setFacebookHello(true, cleanUid, '', 'Đang nhận diện tên Facebook...');
+
+    facebookNameRequestPromise = (async () => {
+      try {
+        const response = await API.sendBridge(
+          ['GET_FACEBOOK_ACCOUNT_NAME', 'GET_FB_ACCOUNT_NAME', 'FACEBOOK_ACCOUNT_NAME'],
+          { uid: cleanUid, forceRefresh }
+        );
+        const data = API.bridgeResponseData(response);
+        const responseUid = S.text(data.uid || cleanUid);
+        const name = extractFacebookName(data);
+
+        if (name && responseUid === cleanUid) {
+          facebookNamesByUid.set(cleanUid, name);
+          if (lastFacebookLoggedIn && lastFacebookUid === cleanUid) {
+            setFacebookHello(true, cleanUid, name);
+          }
+          return name;
+        }
+
+        if (lastFacebookLoggedIn && lastFacebookUid === cleanUid) {
+          setFacebookHello(true, cleanUid, '', 'Chưa nhận diện được tên Facebook');
+        }
+        return '';
+      } catch {
+        if (lastFacebookLoggedIn && lastFacebookUid === cleanUid) {
+          setFacebookHello(true, cleanUid, '', 'Chưa nhận diện được tên Facebook');
+        }
+        return '';
+      } finally {
+        if (facebookNameRequestUid === cleanUid) {
+          facebookNameRequestPromise = null;
+          facebookNameRequestUid = '';
+        }
+      }
+    })();
+
+    return facebookNameRequestPromise;
   }
 
   function getFacebookCookieLines() {
@@ -82,9 +184,13 @@
       const data = API.bridgeResponseData(response);
       const uid = S.text(data.uid || data.facebookUid || data.cUser);
       const loggedIn = data.loggedIn === true || Boolean(uid);
-      renderFacebookAccount({ loggedIn, uid });
+      const name = extractFacebookName(data);
+      renderFacebookAccount({ loggedIn, uid, name });
       updateKnownFacebookAccount(loggedIn, uid);
-      if (loggedIn && uid) return { ...data, uid, loggedIn };
+      if (loggedIn && uid) {
+        if (!name) requestFacebookAccountName(uid).catch(() => {});
+        return { ...data, uid, loggedIn, name };
+      }
       await S.delay(intervalMs);
     }
     throw new Error('Quá thời gian chờ Extension cập nhật UID sau khi Login Cookie.');
@@ -143,8 +249,10 @@
         ? { ...data, uid: immediateUid, loggedIn: true }
         : await waitForFacebookUid();
 
-      renderFacebookAccount({ loggedIn: true, uid: account.uid });
+      const name = extractFacebookName(account);
+      renderFacebookAccount({ loggedIn: true, uid: account.uid, name });
       updateKnownFacebookAccount(true, account.uid);
+      if (!name) requestFacebookAccountName(account.uid).catch(() => {});
       S.setBridgeStatus(
         autoRestart
           ? `Login Cookie thành công. Đã phát hiện UID ${account.uid}; đang chuẩn bị chạy tự động bằng API...`
@@ -163,8 +271,9 @@
     return facebookCookieRotationPromise;
   }
 
-  function renderFacebookAccount({ loggedIn = false, uid = '', message = '', error = false } = {}) {
+  function renderFacebookAccount({ loggedIn = false, uid = '', name = '', message = '', error = false } = {}) {
     const cleanUid = S.text(uid);
+    setFacebookHello(loggedIn, cleanUid, name);
     if (B.facebookUidDisplay) {
       B.facebookUidDisplay.textContent = message || (loggedIn && cleanUid
         ? `UID đang đăng nhập: ${cleanUid}`
@@ -190,8 +299,10 @@
         const data = API.bridgeResponseData(response);
         const uid = S.text(data.uid || data.facebookUid || data.cUser);
         const loggedIn = data.loggedIn === true || Boolean(uid);
-        renderFacebookAccount({ loggedIn, uid });
+        const name = extractFacebookName(data);
+        renderFacebookAccount({ loggedIn, uid, name });
         const transitionedToLoggedOut = updateKnownFacebookAccount(loggedIn, uid);
+        if (loggedIn && uid && !name) requestFacebookAccountName(uid).catch(() => {});
         if (
           transitionedToLoggedOut
           && !facebookLogoutPromise
@@ -201,7 +312,7 @@
         ) {
           rotateFacebookCookieAfterLogout({ source: 'extension-status-change' }).catch(() => {});
         }
-        return { ...data, uid, loggedIn };
+        return { ...data, uid, loggedIn, name };
       } catch (error) {
         renderFacebookAccount({
           message: `Không lấy được UID từ Extension tự liên kết: ${error.message || error}`,
@@ -908,12 +1019,12 @@
       return;
     }
     S.setBridgeBusy(true);
-    [B.apifyScanBtn, B.scanGroupLinksBtn, B.autoWorkflowBtn, B.commentCurrentTabBtn].forEach(btn => { if (btn) btn.disabled = true; });
+    [B.dashboardAutoRunBtn, B.apifyScanBtn, B.scanGroupLinksBtn, B.autoWorkflowBtn, B.commentCurrentTabBtn].forEach(btn => { if (btn) btn.disabled = true; });
     try {
       return await task();
     } finally {
       S.setBridgeBusy(false);
-      [B.apifyScanBtn, B.scanGroupLinksBtn, B.autoWorkflowBtn, B.commentCurrentTabBtn].forEach(btn => { if (btn) btn.disabled = false; });
+      [B.dashboardAutoRunBtn, B.apifyScanBtn, B.scanGroupLinksBtn, B.autoWorkflowBtn, B.commentCurrentTabBtn].forEach(btn => { if (btn) btn.disabled = false; });
     }
   }
 
@@ -965,6 +1076,10 @@
     B.apifyScanBtn?.addEventListener('click', () => runBridgeTask(
       () => scanGroupLinksByExtension({ preloadRakko: true })
     ).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
+    B.dashboardAutoRunBtn?.addEventListener('click', () => {
+      if (!B.scanGroupLinksBtn || B.scanGroupLinksBtn.disabled) return;
+      B.scanGroupLinksBtn.click();
+    });
     B.scanGroupLinksBtn?.addEventListener('click', () => runBridgeTask(() => runClosedGroupLoop()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
     B.autoWorkflowBtn?.addEventListener('click', () => runBridgeTask(() => autoWorkflow()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
     B.commentCurrentTabBtn?.addEventListener('click', () => runBridgeTask(() => commentCurrentTab()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));

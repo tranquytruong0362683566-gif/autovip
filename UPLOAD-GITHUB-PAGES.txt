@@ -1,13 +1,13 @@
-AUTOVIP WEB — SYSTEM DASHBOARD + GIF MÈO GỐC v1.4.2
+AUTOVIP WEB — SYSTEM DASHBOARD + MÈO NỀN TRONG SUỐT v1.4.3
 
 1. Giải nén file ZIP.
 2. Tải TẤT CẢ file bên trong ZIP lên đúng thư mục /autovip/ đang chứa index.html trên GitHub Pages.
 3. Không tải cả thư mục cha lồng thêm một cấp.
-4. Ghi đè toàn bộ file cũ bằng toàn bộ file trong gói v1.4.2.
-5. Đảm bảo dashboard-v1.4.0.css, dashboard-v1.4.0.js, cat-typing.gif, incokit-workflow-v1.0.5.css và incokit-ui-v1.0.5.js nằm cùng cấp với index.html.
+4. Ghi đè toàn bộ file cũ bằng toàn bộ file trong gói v1.4.3.
+5. Đảm bảo dashboard-v1.4.0.css, dashboard-v1.4.0.js, cat-typing-transparent.webp, incokit-workflow-v1.0.5.css và incokit-ui-v1.0.5.js nằm cùng cấp với index.html.
 6. Cài hoặc Reload extension Autovip Full v2.2.0 tại chrome://extensions.
 7. Đóng tab Web Autovip cũ, mở lại:
-   https://tranquytruong0362683566-gif.github.io/autovip/?v=20260721-143
+   https://tranquytruong0362683566-gif.github.io/autovip/?v=20260721-144
 8. Nhấn Ctrl + Shift + R một lần.
 
 Web không còn ô Extension ID. Extension tự liên kết bằng content bridge chỉ trên đúng URL /autovip/.
@@ -84,3 +84,8 @@ THAY ĐỔI v1.4.2:
 - Cắt vùng hiển thị bằng SVG để giữ mèo và bàn phím nhưng không hiện dòng chữ nằm dưới GIF gốc.
 - GIF được cắt đúng đoạn mèo gõ phím và lặp liên tục; phần chữ thừa trong GIF gốc đã được loại bỏ.
 - Tăng mã cache lên 20260721-143 để trình duyệt tải GIF và CSS mới ngay sau khi cập nhật.
+
+THAY ĐỔI v1.4.3:
+- Nền mèo được tách thành alpha trong suốt thật ở từng khung hình, không còn viền vuông hoặc mảng tối.
+- Bỏ lớp glow mờ phía sau mèo, đặt nền ảnh về độ mờ 0 và giữ nét mèo rõ 100%.
+- Tăng mã cache lên 20260721-144 để trình duyệt nhận ngay ảnh mèo trong suốt mới.

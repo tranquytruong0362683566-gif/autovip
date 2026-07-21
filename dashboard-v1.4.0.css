@@ -1,4 +1,4 @@
-/* AutoVIP v1.4.2 — system dashboard + original animated cat GIF. */
+/* AutoVIP v1.4.3 — system dashboard + fully transparent animated cat. */
 
 :root {
   --container: 1460px;
@@ -346,18 +346,13 @@
   bottom: -10%;
   z-index: 2;
   pointer-events: none;
+  opacity: 1;
+  background: transparent;
+  isolation: isolate;
 }
 
 .cat-screen-glow {
-  position: absolute;
-  right: 0;
-  bottom: 4%;
-  width: 88%;
-  height: 72%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(56, 242, 106, .12), transparent 68%);
-  filter: blur(20px);
-  animation: cat-glow 1.2s ease-in-out infinite alternate;
+  display: none;
 }
 
 .cat-artboard {
@@ -367,13 +362,9 @@
   right: 0;
   bottom: 0;
   z-index: 2;
-}
-
-.cat-filter-defs {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
+  opacity: 1;
+  background: transparent;
+  backdrop-filter: none;
 }
 
 .cat-typing-gif {
@@ -384,9 +375,10 @@
   z-index: 2;
   object-fit: contain;
   object-position: center bottom;
-  opacity: .92;
+  opacity: 1;
   clip-path: inset(0 0 29% 0);
-  filter: url("#catNeonTransparency") drop-shadow(0 0 5px rgba(56, 242, 106, .46));
+  background: transparent;
+  filter: brightness(0) saturate(100%) invert(75%) sepia(96%) saturate(1036%) hue-rotate(76deg) brightness(103%) contrast(101%) drop-shadow(0 0 4px rgba(56, 242, 106, .42));
 }
 
 .monitor-stand {

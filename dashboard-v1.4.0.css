@@ -981,3 +981,9 @@
   .terminal-line.is-running b,
   .hero-process .process-step.is-active span { animation-duration: .8s !important; }
 }
+#systemDashboard.system-dashboard.card {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}

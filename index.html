@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=20260720-v113-hacker">
   <link rel="manifest" href="./site.webmanifest?v=20260720-v113-hacker">
   <link rel="stylesheet" href="./incokit-workflow-v1.0.5.css?v=20260720-115-transparent-all-panels">
-  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260721-150-remove-page-glow">
+  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260721-190-clock-in-screen-auto-button">
 </head>
 <body>
   <canvas id="magnetic-grid" aria-hidden="true"></canvas>
@@ -55,6 +55,14 @@
             <strong>AI AUTO COMMENT / LIVE PROCESS</strong>
           </div>
           <div class="monitor-screen">
+            <div class="monitor-clock" aria-label="Thời gian Việt Nam">
+              <time class="system-clock-time" id="systemClock" datetime="">00:00:00</time>
+              <div class="system-clock-meta">
+                <time id="systemDate" datetime="">--/--/----</time>
+                <span id="systemWeekday">---</span>
+              </div>
+            </div>
+
             <div class="terminal-panel" aria-live="polite" aria-atomic="false">
               <div class="terminal-command"><span>$</span> autovip --target facebook --mode comment</div>
               <div class="terminal-log" id="systemTerminalLog">
@@ -79,15 +87,6 @@
       </div>
 
       <aside class="system-side-panel">
-        <section class="system-clock-card" aria-label="Đồng hồ hệ thống Việt Nam">
-          <div class="system-card-title"><span class="clock-icon" aria-hidden="true">◷</span> Đồng Hồ Hệ Thống</div>
-          <time class="system-clock-time" id="systemClock" datetime="">00:00:00</time>
-          <div class="system-clock-meta">
-            <time id="systemDate" datetime="">--/--/----</time>
-            <span id="systemWeekday">---</span>
-          </div>
-        </section>
-
         <div class="facebook-account-bar" id="facebookAccountBar" aria-live="polite">
           <div class="facebook-account-main">
             <div class="facebook-account-icon" aria-hidden="true">f</div>
@@ -99,13 +98,10 @@
           <button class="btn btn-danger btn-sm" id="facebookLogoutBtn" type="button" disabled>Đăng Xuất</button>
         </div>
 
-        <div class="hero-process" id="systemProcessSteps" role="group" aria-label="Trình tự hoạt động">
-          <div class="process-step is-active" data-process-step="scan"><span>01</span><strong>Lấy Link</strong></div>
-          <i aria-hidden="true">→</i>
-          <div class="process-step" data-process-step="ai"><span>02</span><strong>AI Xử Lý</strong></div>
-          <i aria-hidden="true">→</i>
-          <div class="process-step" data-process-step="comment"><span>03</span><strong>Bình Luận</strong></div>
-        </div>
+        <button class="btn btn-primary dashboard-auto-run-btn" id="dashboardAutoRunBtn" type="button">
+          <span class="dashboard-auto-run-icon" aria-hidden="true">▶</span>
+          <span>Chạy Tự Động</span>
+        </button>
       </aside>
     </section>
   </main>
@@ -497,10 +493,10 @@
 
   <script src="incokit-ui-v1.0.5.js?v=20260720-113"></script>
   <script src="chatgpt-api.js?v=20260721-145-single-template-store"></script>
-  <script src="bridge-state.js?v=20260721-130"></script>
+  <script src="bridge-state.js?v=20260721-190-dashboard-auto-button"></script>
   <script src="bridge-api.js?v=20260720-113"></script>
   <script src="apify-api.js?v=20260721-130"></script>
-  <script src="bridge-workflow.js?v=20260721-130"></script>
+  <script src="bridge-workflow.js?v=20260721-190-dashboard-auto-button"></script>
   <script src="dashboard-v1.4.0.js?v=20260721-145-floating-workspaces"></script>
 </body>
 </html>

@@ -18,6 +18,7 @@
     linkPauseSecondsInput: $('#linkPauseSecondsInput'),
     fbPostLinkInput: $('#fbPostLinkInput'),
     fbPostLinkCounter: $('#fbPostLinkCounter'),
+    dashboardAutoRunBtn: $('#dashboardAutoRunBtn'),
     scanGroupLinksBtn: $('#scanGroupLinksBtn'),
     apifyScanBtn: $('#apifyScanBtn'),
     stopClosedLoopBtn: $('#stopClosedLoopBtn'),

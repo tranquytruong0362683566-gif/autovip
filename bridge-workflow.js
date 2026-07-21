@@ -908,12 +908,12 @@
       return;
     }
     S.setBridgeBusy(true);
-    [B.apifyScanBtn, B.scanGroupLinksBtn, B.autoWorkflowBtn, B.commentCurrentTabBtn].forEach(btn => { if (btn) btn.disabled = true; });
+    [B.dashboardAutoRunBtn, B.apifyScanBtn, B.scanGroupLinksBtn, B.autoWorkflowBtn, B.commentCurrentTabBtn].forEach(btn => { if (btn) btn.disabled = true; });
     try {
       return await task();
     } finally {
       S.setBridgeBusy(false);
-      [B.apifyScanBtn, B.scanGroupLinksBtn, B.autoWorkflowBtn, B.commentCurrentTabBtn].forEach(btn => { if (btn) btn.disabled = false; });
+      [B.dashboardAutoRunBtn, B.apifyScanBtn, B.scanGroupLinksBtn, B.autoWorkflowBtn, B.commentCurrentTabBtn].forEach(btn => { if (btn) btn.disabled = false; });
     }
   }
 
@@ -965,6 +965,10 @@
     B.apifyScanBtn?.addEventListener('click', () => runBridgeTask(
       () => scanGroupLinksByExtension({ preloadRakko: true })
     ).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
+    B.dashboardAutoRunBtn?.addEventListener('click', () => {
+      if (!B.scanGroupLinksBtn || B.scanGroupLinksBtn.disabled) return;
+      B.scanGroupLinksBtn.click();
+    });
     B.scanGroupLinksBtn?.addEventListener('click', () => runBridgeTask(() => runClosedGroupLoop()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
     B.autoWorkflowBtn?.addEventListener('click', () => runBridgeTask(() => autoWorkflow()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
     B.commentCurrentTabBtn?.addEventListener('click', () => runBridgeTask(() => commentCurrentTab()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));

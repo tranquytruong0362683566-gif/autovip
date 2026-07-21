@@ -1,10 +1,11 @@
-/* AutoVIP v1.4.0 — system dashboard layout. */
+/* AutoVIP v1.4.1 — system dashboard + independent typing arms. */
 
 :root {
   --container: 1460px;
   --dashboard-neon: #38f26a;
   --dashboard-neon-soft: rgba(56, 242, 106, .18);
   --dashboard-screen: rgba(1, 10, 5, .86);
+  --cat-screen-fill: #020f08;
 }
 
 .sr-only {
@@ -339,99 +340,131 @@
 }
 
 .cat-typing-scene {
-  width: 61%;
-  height: 100%;
+  width: 50%;
+  height: 86%;
   position: absolute;
-  right: -2%;
-  bottom: -2%;
+  right: -1.5%;
+  bottom: -10%;
   z-index: 2;
   pointer-events: none;
 }
 
 .cat-screen-glow {
   position: absolute;
-  right: 2%;
-  bottom: 8%;
-  width: 84%;
-  height: 66%;
+  right: 0;
+  bottom: 4%;
+  width: 88%;
+  height: 72%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(56, 242, 106, .18), transparent 66%);
-  filter: blur(16px);
+  background: radial-gradient(circle, rgba(56, 242, 106, .12), transparent 68%);
+  filter: blur(20px);
   animation: cat-glow 1.2s ease-in-out infinite alternate;
 }
 
-.cat-typing-image {
+.cat-artboard {
+  height: 100%;
+  aspect-ratio: 1;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  transform-origin: 55% 62%;
+  animation: cat-type-body 1.15s ease-in-out infinite;
+}
+
+.cat-typing-art {
   width: 100%;
   height: 100%;
   display: block;
   position: relative;
   z-index: 2;
-  object-fit: contain;
-  object-position: center bottom;
-  opacity: .9;
-  filter: invert(1) sepia(1) saturate(7) hue-rotate(72deg) brightness(.78) contrast(1.18) drop-shadow(0 0 7px rgba(56, 242, 106, .32));
-  mix-blend-mode: screen;
-  transform-origin: 55% 62%;
-  animation: cat-type-body .62s steps(2, end) infinite;
+  overflow: visible;
+  opacity: .92;
+  filter: drop-shadow(0 0 5px rgba(56, 242, 106, .46));
 }
 
-.typing-paw {
-  width: 54px;
-  height: 21px;
+.typing-arm,
+.typing-arm-eraser {
   position: absolute;
+  overflow: visible;
+  transform-box: fill-box;
+  will-change: transform;
+}
+
+.typing-arm-eraser {
+  z-index: 3;
+}
+
+.typing-arm-eraser path {
+  fill: var(--cat-screen-fill);
+  stroke: var(--cat-screen-fill);
+  stroke-width: 16;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.typing-arm {
   z-index: 5;
-  border: 2px solid rgba(120, 255, 151, .78);
-  border-radius: 55% 45% 50% 46%;
-  background: rgba(3, 20, 8, .82);
-  box-shadow: 0 0 10px rgba(56, 242, 106, .24), inset 0 -4px 8px rgba(56, 242, 106, .07);
-  transform-origin: 18% 50%;
+  filter: drop-shadow(0 0 5px rgba(56, 242, 106, .45));
 }
 
-.typing-paw::after {
-  content: "";
-  width: 8px;
-  height: 4px;
-  position: absolute;
-  right: 7px;
-  bottom: 2px;
-  border-bottom: 1px solid rgba(120, 255, 151, .7);
-  border-radius: 50%;
+.typing-arm path {
+  fill: var(--cat-screen-fill);
+  stroke: rgba(93, 255, 130, .94);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
 }
 
-.typing-paw-left {
-  left: 31%;
-  top: 54%;
-  transform: rotate(9deg);
-  animation: paw-tap-left .32s steps(2, end) infinite;
+.typing-arm-left,
+.typing-arm-eraser-left {
+  width: 31%;
+  height: 11.5%;
+  left: 21.5%;
+  top: 57%;
+  transform: rotate(6deg);
+  transform-origin: 94% 14%;
 }
 
-.typing-paw-right {
-  left: 59%;
+.typing-arm-right,
+.typing-arm-eraser-right {
+  width: 24%;
+  height: 11%;
+  left: 52%;
   top: 59%;
-  transform: rotate(-2deg);
-  animation: paw-tap-right .32s steps(2, end) .16s infinite;
+  transform: rotate(-3deg);
+  transform-origin: 94% 12%;
+}
+
+.typing-arm-left {
+  animation: arm-press-left .72s cubic-bezier(.35, 0, .2, 1) infinite;
+}
+
+.typing-arm-right {
+  animation: arm-press-right .72s cubic-bezier(.35, 0, .2, 1) infinite;
 }
 
 .typing-key {
-  width: 20px;
-  height: 7px;
+  width: 7%;
+  height: 1.7%;
   position: absolute;
-  z-index: 4;
+  z-index: 6;
   border-radius: 2px;
-  background: rgba(56, 242, 106, .26);
-  box-shadow: 0 0 8px rgba(56, 242, 106, .55);
+  background: rgba(102, 255, 136, .32);
+  box-shadow: 0 0 10px rgba(56, 242, 106, .7);
 }
 
 .typing-key-left {
-  left: 39%;
-  top: 65%;
-  animation: key-flash .32s steps(2, end) infinite;
+  left: 32%;
+  top: 65.5%;
+  animation: key-flash-left .72s steps(2, end) infinite;
 }
 
 .typing-key-right {
-  left: 68%;
+  left: 59%;
   top: 69%;
-  animation: key-flash .32s steps(2, end) .16s infinite;
+  animation: key-flash-right .72s steps(2, end) infinite;
 }
 
 .monitor-stand {
@@ -635,23 +668,28 @@
 }
 
 @keyframes cat-type-body {
-  0%, 49% { transform: translateY(0) rotate(0); }
-  50%, 100% { transform: translateY(2px) rotate(.15deg); }
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(2px) rotate(.12deg); }
 }
 
-@keyframes paw-tap-left {
-  0%, 49% { transform: translateY(-5px) rotate(7deg); }
-  50%, 100% { transform: translateY(5px) rotate(11deg); }
+@keyframes arm-press-left {
+  0%, 8%, 48%, 100% { transform: translateY(-2px) rotate(6deg); }
+  18%, 38% { transform: translate(-2px, 11px) rotate(-2deg); }
 }
 
-@keyframes paw-tap-right {
-  0%, 49% { transform: translateY(-5px) rotate(-4deg); }
-  50%, 100% { transform: translateY(5px) rotate(1deg); }
+@keyframes arm-press-right {
+  0%, 50%, 92%, 100% { transform: translateY(-2px) rotate(-3deg); }
+  62%, 82% { transform: translate(2px, 11px) rotate(-10deg); }
 }
 
-@keyframes key-flash {
-  0%, 49% { opacity: .16; transform: scale(.82); }
-  50%, 100% { opacity: 1; transform: scale(1.06); }
+@keyframes key-flash-left {
+  0%, 8%, 48%, 100% { opacity: .08; transform: scale(.72); }
+  18%, 38% { opacity: 1; transform: scale(1.18); }
+}
+
+@keyframes key-flash-right {
+  0%, 50%, 92%, 100% { opacity: .08; transform: scale(.72); }
+  62%, 82% { opacity: 1; transform: scale(1.18); }
 }
 
 @keyframes cat-glow {
@@ -761,7 +799,11 @@
     width: 100%;
     height: 56%;
     right: 0;
-    bottom: -1%;
+    bottom: -5%;
+  }
+
+  .cat-artboard {
+    right: -2%;
   }
 
   .system-side-panel,
@@ -837,12 +879,8 @@
   }
 
   .cat-typing-scene {
-    height: 51%;
-  }
-
-  .typing-paw {
-    width: 43px;
-    height: 17px;
+    height: 49%;
+    bottom: -6%;
   }
 
   .system-clock-card {
@@ -863,13 +901,19 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cat-typing-image,
+  .cat-artboard,
   .cat-screen-glow,
-  .typing-paw,
+  .typing-arm,
   .typing-key,
   .terminal-line.is-running b,
   .hero-process .process-step.is-active span {
-    animation-duration: .8s !important;
     animation-iteration-count: infinite !important;
   }
+
+  .cat-artboard { animation-duration: 1.15s !important; }
+  .cat-screen-glow { animation-duration: 1.2s !important; }
+  .typing-arm,
+  .typing-key { animation-duration: .72s !important; }
+  .terminal-line.is-running b,
+  .hero-process .process-step.is-active span { animation-duration: .8s !important; }
 }

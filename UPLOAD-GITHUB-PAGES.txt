@@ -1,13 +1,13 @@
-AUTOVIP WEB — SYSTEM DASHBOARD + VÒNG LẶP BỀN VỮNG v1.4.0
+AUTOVIP WEB — SYSTEM DASHBOARD + TAY MÈO GÕ PHÍM v1.4.1
 
 1. Giải nén file ZIP.
 2. Tải TẤT CẢ file bên trong ZIP lên đúng thư mục /autovip/ đang chứa index.html trên GitHub Pages.
 3. Không tải cả thư mục cha lồng thêm một cấp.
-4. Ghi đè toàn bộ file cũ bằng toàn bộ file trong gói v1.4.0.
+4. Ghi đè toàn bộ file cũ bằng toàn bộ file trong gói v1.4.1.
 5. Đảm bảo dashboard-v1.4.0.css, dashboard-v1.4.0.js, cat-typing.png, incokit-workflow-v1.0.5.css và incokit-ui-v1.0.5.js nằm cùng cấp với index.html.
 6. Cài hoặc Reload extension Autovip Full v2.2.0 tại chrome://extensions.
 7. Đóng tab Web Autovip cũ, mở lại:
-   https://tranquytruong0362683566-gif.github.io/autovip/?v=20260721-140
+   https://tranquytruong0362683566-gif.github.io/autovip/?v=20260721-141
 8. Nhấn Ctrl + Shift + R một lần.
 
 Web không còn ô Extension ID. Extension tự liên kết bằng content bridge chỉ trên đúng URL /autovip/.
@@ -69,3 +69,10 @@ THAY ĐỔI v1.4.0:
 - Chuyển cookie đổi tài khoản Facebook và thời gian vòng chạy vào bảng Cài Đặt WEB.
 - Bỏ khung Cài đặt nâng cao cũ. Hai bảng mới có Lưu Cài Đặt và Huỷ; Huỷ khôi phục giá trị trước khi mở bảng.
 - Giữ nguyên ID, localStorage và toàn bộ logic Apify, Rakko, ChatGPT, hàng đợi, bình luận, đổi UID và Extension bridge.
+
+THAY ĐỔI v1.4.1:
+- Thay hiệu ứng vòng sáng nhỏ bằng hai cánh tay SVG độc lập, bấm phím trái/phải luân phiên với hành trình 13px.
+- Mỗi lần tay hạ xuống, vùng phím tương ứng sáng lên để thấy rõ thao tác gõ.
+- Chuyển ảnh mèo qua bộ lọc SVG: nền trắng/đen của ảnh trở thành trong suốt và màu nền phía sau đồng nhất với màn hình.
+- Thu nhỏ mèo, đưa xuống sát góc dưới bên phải để không che terminal và cân đối với ba khung bên phải.
+- Tăng mã cache lên 20260721-141 để trình duyệt nhận ngay CSS, ảnh và chuyển động mới.

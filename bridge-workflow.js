@@ -15,10 +15,6 @@
   let autoRestartScheduled = false;
   let facebookAccountStateInitialized = false;
   let lastFacebookLoggedIn = false;
-  let lastFacebookUid = '';
-  let facebookNameLookupPromise = null;
-  let facebookNameLookupUid = '';
-  const failedFacebookNameLookups = new Set();
 
   const CLOSED_LOOP_FATAL_CODES = new Set([
     'APIFY_MODULE_MISSING',
@@ -56,103 +52,9 @@
   function updateKnownFacebookAccount(loggedIn, uid) {
     const previousLoggedIn = lastFacebookLoggedIn;
     const wasInitialized = facebookAccountStateInitialized;
-    const cleanUid = S.text(uid);
-    lastFacebookLoggedIn = Boolean(loggedIn && cleanUid);
-    lastFacebookUid = lastFacebookLoggedIn ? cleanUid : '';
+    lastFacebookLoggedIn = Boolean(loggedIn && S.text(uid));
     facebookAccountStateInitialized = true;
     return wasInitialized && previousLoggedIn && !lastFacebookLoggedIn;
-  }
-
-  function normalizeFacebookName(value) {
-    const name = S.text(value).replace(/\s+/g, ' ');
-    if (!name || /^\d+$/.test(name) || name.length > 120) return '';
-    return name;
-  }
-
-  function extractFacebookName(data) {
-    if (!data || typeof data !== 'object') return '';
-    const candidates = [
-      data.name,
-      data.facebookName,
-      data.profileName,
-      data.displayName,
-      data.fullName,
-      data.accountName,
-      data.account?.name,
-      data.profile?.name,
-      data.user?.name
-    ];
-    for (const candidate of candidates) {
-      const name = normalizeFacebookName(candidate);
-      if (name) return name;
-    }
-    return '';
-  }
-
-  function getCachedFacebookName(uid) {
-    const cleanUid = S.text(uid);
-    const cache = S.load(S.STORE.facebookProfileNames, {});
-    if (!cleanUid || !cache || Array.isArray(cache) || typeof cache !== 'object') return '';
-    return normalizeFacebookName(cache[cleanUid]);
-  }
-
-  function cacheFacebookName(uid, name) {
-    const cleanUid = S.text(uid);
-    const cleanName = normalizeFacebookName(name);
-    if (!cleanUid || !cleanName) return '';
-    const current = S.load(S.STORE.facebookProfileNames, {});
-    const cache = current && !Array.isArray(current) && typeof current === 'object' ? current : {};
-    cache[cleanUid] = cleanName;
-    S.save(S.STORE.facebookProfileNames, cache);
-    return cleanName;
-  }
-
-  async function resolveFacebookName(uid, accountData = {}) {
-    const cleanUid = S.text(uid);
-    if (!cleanUid) return '';
-
-    const immediateName = extractFacebookName(accountData) || getCachedFacebookName(cleanUid);
-    if (immediateName) return cacheFacebookName(cleanUid, immediateName);
-    if (failedFacebookNameLookups.has(cleanUid)) return '';
-    if (facebookNameLookupPromise && facebookNameLookupUid === cleanUid) return facebookNameLookupPromise;
-
-    facebookNameLookupUid = cleanUid;
-    facebookNameLookupPromise = (async () => {
-      try {
-        const response = await API.sendBridge(
-          ['GET_FACEBOOK_PROFILE_NAME', 'GET_FB_PROFILE_NAME', 'RESOLVE_FACEBOOK_PROFILE_NAME'],
-          {
-            uid: cleanUid,
-            profileUrl: `https://www.facebook.com/profile.php?id=${encodeURIComponent(cleanUid)}`
-          }
-        );
-        const name = extractFacebookName(API.bridgeResponseData(response));
-        if (name) return cacheFacebookName(cleanUid, name);
-      } catch {}
-      failedFacebookNameLookups.add(cleanUid);
-      return '';
-    })().finally(() => {
-      if (facebookNameLookupUid === cleanUid) {
-        facebookNameLookupPromise = null;
-        facebookNameLookupUid = '';
-      }
-    });
-
-    return facebookNameLookupPromise;
-  }
-
-  function requestFacebookName(uid, accountData = {}) {
-    const cleanUid = S.text(uid);
-    const immediateName = extractFacebookName(accountData) || getCachedFacebookName(cleanUid);
-    if (immediateName) return immediateName;
-    if (!cleanUid) return '';
-
-    resolveFacebookName(cleanUid, accountData).then(name => {
-      if (name && lastFacebookLoggedIn && lastFacebookUid === cleanUid) {
-        renderFacebookAccount({ loggedIn: true, uid: cleanUid, name });
-      }
-    }).catch(() => {});
-    return '';
   }
 
   function getFacebookCookieLines() {
@@ -175,18 +77,14 @@
     while (Date.now() < deadline) {
       const response = await API.sendBridge(
         ['GET_FACEBOOK_ACCOUNT', 'GET_FB_UID', 'FACEBOOK_ACCOUNT_STATUS'],
-        { includeProfileName: true }
+        {}
       );
       const data = API.bridgeResponseData(response);
       const uid = S.text(data.uid || data.facebookUid || data.cUser);
       const loggedIn = data.loggedIn === true || Boolean(uid);
-      const name = extractFacebookName(data) || getCachedFacebookName(uid);
-      renderFacebookAccount({ loggedIn, uid, name });
+      renderFacebookAccount({ loggedIn, uid });
       updateKnownFacebookAccount(loggedIn, uid);
-      if (loggedIn && uid) {
-        if (!name) requestFacebookName(uid, data);
-        return { ...data, uid, loggedIn, name };
-      }
+      if (loggedIn && uid) return { ...data, uid, loggedIn };
       await S.delay(intervalMs);
     }
     throw new Error('Quá thời gian chờ Extension cập nhật UID sau khi Login Cookie.');
@@ -245,10 +143,8 @@
         ? { ...data, uid: immediateUid, loggedIn: true }
         : await waitForFacebookUid();
 
-      const name = extractFacebookName(account) || getCachedFacebookName(account.uid);
-      renderFacebookAccount({ loggedIn: true, uid: account.uid, name });
+      renderFacebookAccount({ loggedIn: true, uid: account.uid });
       updateKnownFacebookAccount(true, account.uid);
-      if (!name) requestFacebookName(account.uid, account);
       S.setBridgeStatus(
         autoRestart
           ? `Login Cookie thành công. Đã phát hiện UID ${account.uid}; đang chuẩn bị chạy tự động bằng API...`
@@ -267,14 +163,8 @@
     return facebookCookieRotationPromise;
   }
 
-  function renderFacebookAccount({ loggedIn = false, uid = '', name = '', message = '', error = false } = {}) {
+  function renderFacebookAccount({ loggedIn = false, uid = '', message = '', error = false } = {}) {
     const cleanUid = S.text(uid);
-    const cleanName = normalizeFacebookName(name) || getCachedFacebookName(cleanUid);
-    if (B.facebookNameDisplay) {
-      B.facebookNameDisplay.textContent = loggedIn && cleanUid
-        ? (cleanName || 'Đang nhận diện tên Facebook...')
-        : 'Chưa đăng nhập Facebook';
-    }
     if (B.facebookUidDisplay) {
       B.facebookUidDisplay.textContent = message || (loggedIn && cleanUid
         ? `UID đang đăng nhập: ${cleanUid}`
@@ -295,15 +185,13 @@
         if (!silent) renderFacebookAccount({ message: 'Đang lấy UID từ Extension...' });
         const response = await API.sendBridge(
           ['GET_FACEBOOK_ACCOUNT', 'GET_FB_UID', 'FACEBOOK_ACCOUNT_STATUS'],
-          { includeProfileName: true }
+          {}
         );
         const data = API.bridgeResponseData(response);
         const uid = S.text(data.uid || data.facebookUid || data.cUser);
         const loggedIn = data.loggedIn === true || Boolean(uid);
-        const name = extractFacebookName(data) || getCachedFacebookName(uid);
-        renderFacebookAccount({ loggedIn, uid, name });
+        renderFacebookAccount({ loggedIn, uid });
         const transitionedToLoggedOut = updateKnownFacebookAccount(loggedIn, uid);
-        if (loggedIn && uid && !name) requestFacebookName(uid, data);
         if (
           transitionedToLoggedOut
           && !facebookLogoutPromise
@@ -313,7 +201,7 @@
         ) {
           rotateFacebookCookieAfterLogout({ source: 'extension-status-change' }).catch(() => {});
         }
-        return { ...data, uid, loggedIn, name };
+        return { ...data, uid, loggedIn };
       } catch (error) {
         renderFacebookAccount({
           message: `Không lấy được UID từ Extension tự liên kết: ${error.message || error}`,
@@ -1020,12 +908,12 @@
       return;
     }
     S.setBridgeBusy(true);
-    [B.dashboardAutoRunBtn, B.apifyScanBtn, B.scanGroupLinksBtn, B.autoWorkflowBtn, B.commentCurrentTabBtn].forEach(btn => { if (btn) btn.disabled = true; });
+    [B.apifyScanBtn, B.scanGroupLinksBtn, B.autoWorkflowBtn, B.commentCurrentTabBtn].forEach(btn => { if (btn) btn.disabled = true; });
     try {
       return await task();
     } finally {
       S.setBridgeBusy(false);
-      [B.dashboardAutoRunBtn, B.apifyScanBtn, B.scanGroupLinksBtn, B.autoWorkflowBtn, B.commentCurrentTabBtn].forEach(btn => { if (btn) btn.disabled = false; });
+      [B.apifyScanBtn, B.scanGroupLinksBtn, B.autoWorkflowBtn, B.commentCurrentTabBtn].forEach(btn => { if (btn) btn.disabled = false; });
     }
   }
 
@@ -1059,7 +947,8 @@
     S.getGroupLimit();
     S.getLoopPauseSeconds();
     S.getLinkPauseSeconds();
-    S.wireHistoryInputs();
+    S.renderCommentedLinks();
+    S.renderRemovedLinks();
 
     B.facebookLogoutBtn?.addEventListener('click', () => {
       logoutFacebookAccount().catch(() => {});
@@ -1076,10 +965,6 @@
     B.apifyScanBtn?.addEventListener('click', () => runBridgeTask(
       () => scanGroupLinksByExtension({ preloadRakko: true })
     ).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
-    B.dashboardAutoRunBtn?.addEventListener('click', () => {
-      if (!B.scanGroupLinksBtn || B.scanGroupLinksBtn.disabled) return;
-      B.scanGroupLinksBtn.click();
-    });
     B.scanGroupLinksBtn?.addEventListener('click', () => runBridgeTask(() => runClosedGroupLoop()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
     B.autoWorkflowBtn?.addEventListener('click', () => runBridgeTask(() => autoWorkflow()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
     B.commentCurrentTabBtn?.addEventListener('click', () => runBridgeTask(() => commentCurrentTab()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
@@ -1091,14 +976,12 @@
     B.clearCommentedLinksBtn?.addEventListener('click', () => {
       if (!confirm('Xoá toàn bộ danh sách link đã bình luận thành công?')) return;
       S.save(S.STORE.commented, []);
-      S.save(S.STORE.commentedText, '');
       S.renderCommentedLinks();
       S.setBridgeStatus('Đã xoá danh sách link đã bình luận thành công.', 'ok');
     });
     B.clearRemovedLinksBtn?.addEventListener('click', () => {
       if (!confirm('Xoá toàn bộ danh sách link đã loại bỏ?')) return;
       S.save(S.STORE.removed, []);
-      S.save(S.STORE.removedText, '');
       S.renderRemovedLinks();
       S.setBridgeStatus('Đã xoá danh sách link đã loại bỏ.', 'ok');
     });

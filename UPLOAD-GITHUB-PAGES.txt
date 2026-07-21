@@ -1,13 +1,13 @@
-AUTOVIP WEB — SYSTEM DASHBOARD + MÈO NỀN TRONG SUỐT v1.4.3
+AUTOVIP WEB — BỐ CỤC ẢNH MẪU + MÈO GÕ PHÍM NGUYÊN BẢN v1.4.4
 
 1. Giải nén file ZIP.
 2. Tải TẤT CẢ file bên trong ZIP lên đúng thư mục /autovip/ đang chứa index.html trên GitHub Pages.
 3. Không tải cả thư mục cha lồng thêm một cấp.
-4. Ghi đè toàn bộ file cũ bằng toàn bộ file trong gói v1.4.3.
-5. Đảm bảo dashboard-v1.4.0.css, dashboard-v1.4.0.js, cat-typing-transparent.webp, incokit-workflow-v1.0.5.css và incokit-ui-v1.0.5.js nằm cùng cấp với index.html.
+4. Ghi đè toàn bộ file cũ bằng toàn bộ file trong gói v1.4.4.
+5. Đảm bảo dashboard-v1.4.0.css, dashboard-v1.4.0.js, cat-typing-reference.gif, incokit-workflow-v1.0.5.css và incokit-ui-v1.0.5.js nằm cùng cấp với index.html.
 6. Cài hoặc Reload extension Autovip Full v2.2.0 tại chrome://extensions.
 7. Đóng tab Web Autovip cũ, mở lại:
-   https://tranquytruong0362683566-gif.github.io/autovip/?v=20260721-144
+   https://tranquytruong0362683566-gif.github.io/autovip/?v=20260721-145
 8. Nhấn Ctrl + Shift + R một lần.
 
 Web không còn ô Extension ID. Extension tự liên kết bằng content bridge chỉ trên đúng URL /autovip/.
@@ -89,3 +89,11 @@ THAY ĐỔI v1.4.3:
 - Nền mèo được tách thành alpha trong suốt thật ở từng khung hình, không còn viền vuông hoặc mảng tối.
 - Bỏ lớp glow mờ phía sau mèo, đặt nền ảnh về độ mờ 0 và giữ nét mèo rõ 100%.
 - Tăng mã cache lên 20260721-144 để trình duyệt nhận ngay ảnh mèo trong suốt mới.
+
+THAY ĐỔI v1.4.4:
+- Bố trí lại System Dashboard theo ảnh mẫu: terminal, đồng hồ và tài khoản Facebook nằm chung trong màn hình lớn; mèo và bàn phím đặt chồng ở góc dưới bên phải.
+- Dùng đúng 14 khung chuyển động đầu của file e58cdfdc496b880c8ff721d441adbe08: tay trái, tay phải và hai tay gõ luân phiên trong vòng lặp 1,4 giây.
+- Khôi phục thân mèo và bàn phím màu trắng, đồng thời tách nền ngoài thành alpha trong suốt thật nên không còn viền vuông.
+- Tăng nhẹ độ trong suốt của các khung và ô nhập liệu; làm nền xanh đen sáng hơn nhưng giữ nguyên nền lưới cùng hiệu ứng chuột.
+- Không đổi ID HTML, localStorage, message, API, hàng đợi, quy trình bình luận hoặc Extension bridge.
+- Tăng mã cache lên 20260721-145 để trình duyệt tải đúng CSS và GIF mới.

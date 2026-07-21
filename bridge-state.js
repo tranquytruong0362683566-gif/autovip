@@ -5,6 +5,7 @@
 
   const B = {
     facebookAccountBar: $('#facebookAccountBar'),
+    facebookNameDisplay: $('#facebookNameDisplay'),
     facebookUidDisplay: $('#facebookUidDisplay'),
     facebookLogoutBtn: $('#facebookLogoutBtn'),
     facebookCookiesInput: $('#facebookCookiesInput'),
@@ -30,9 +31,11 @@
     fbMaxChars: $('#fbMaxChars'),
     clearCommentedLinksBtn: $('#clearCommentedLinksBtn'),
     commentedLinksBox: $('#commentedLinksBox'),
+    commentedLinksView: $('#commentedLinksView'),
     commentedCountStat: $('#commentedCountStat'),
     clearRemovedLinksBtn: $('#clearRemovedLinksBtn'),
     removedLinksBox: $('#removedLinksBox'),
+    removedLinksView: $('#removedLinksView'),
     removedCountStat: $('#removedCountStat')
   };
 
@@ -48,8 +51,11 @@
     linkPauseSeconds: 'truong_fb_bridge_link_pause_seconds_v1',
     postLinks: 'truong_fb_bridge_post_links_v1',
     postCaptions: 'truong_fb_bridge_post_captions_v1',
+    facebookProfileNames: 'truong_fb_bridge_facebook_profile_names_v1',
     commented: 'truong_fb_bridge_commented_links_v1',
-    removed: 'truong_fb_bridge_removed_links_v1'
+    commentedText: 'truong_fb_bridge_commented_text_v1',
+    removed: 'truong_fb_bridge_removed_links_v1',
+    removedText: 'truong_fb_bridge_removed_text_v1'
   };
 
   const APIFY_ACTOR_IDS = [
@@ -200,14 +206,57 @@
     return out;
   }
 
+  function extractHistoryLinks(raw) {
+    const textValue = String(raw || '');
+    const matches = textValue.match(/https?:\/\/[^\s<>"']+/gi) || [];
+    const candidates = matches.length
+      ? matches.map(link => link.replace(/[),.;!?]+$/g, ''))
+      : parseLines(textValue);
+    return uniqueLinks(candidates);
+  }
+
+  function getHistoryText(textKey, links) {
+    const stored = load(textKey, null);
+    return typeof stored === 'string' ? stored : links.join('\n');
+  }
+
+  function renderHistoryLinks(host, links) {
+    if (!host) return;
+    host.replaceChildren();
+    host.hidden = !links.length;
+
+    for (const link of links) {
+      const row = document.createElement('div');
+      row.className = 'record-link-row';
+
+      const value = document.createElement('span');
+      value.className = 'record-link-value';
+      value.textContent = link;
+
+      const open = document.createElement('a');
+      open.className = 'record-link-open';
+      open.href = link;
+      open.target = '_blank';
+      open.rel = 'noopener noreferrer';
+      open.textContent = '(xem)';
+      open.setAttribute('aria-label', `Mở link ${link} trong tab mới`);
+
+      row.append(value, open);
+      host.appendChild(row);
+    }
+  }
+
   function getCommentedLinks() {
     return uniqueLinks(load(STORE.commented, []));
   }
 
   function renderCommentedLinks() {
     const list = getCommentedLinks();
-    if (B.commentedLinksBox) B.commentedLinksBox.value = list.join('\n');
+    if (B.commentedLinksBox && document.activeElement !== B.commentedLinksBox) {
+      B.commentedLinksBox.value = getHistoryText(STORE.commentedText, list);
+    }
     if (B.commentedCountStat) B.commentedCountStat.textContent = String(list.length);
+    renderHistoryLinks(B.commentedLinksView, list);
   }
 
   function getRemovedLinks() {
@@ -216,8 +265,45 @@
 
   function renderRemovedLinks() {
     const list = getRemovedLinks();
-    if (B.removedLinksBox) B.removedLinksBox.value = list.join('\n');
+    if (B.removedLinksBox && document.activeElement !== B.removedLinksBox) {
+      B.removedLinksBox.value = getHistoryText(STORE.removedText, list);
+    }
     if (B.removedCountStat) B.removedCountStat.textContent = String(list.length);
+    renderHistoryLinks(B.removedLinksView, list);
+  }
+
+  function syncHistoryInput(box, linksKey, textKey, count, view) {
+    if (!box) return;
+    const raw = String(box.value || '');
+    const links = extractHistoryLinks(raw);
+    save(textKey, raw);
+    save(linksKey, links);
+    if (count) count.textContent = String(links.length);
+    renderHistoryLinks(view, links);
+    syncPostLinksInput();
+  }
+
+  function wireHistoryInputs() {
+    renderCommentedLinks();
+    renderRemovedLinks();
+    B.commentedLinksBox?.addEventListener('input', () => {
+      syncHistoryInput(
+        B.commentedLinksBox,
+        STORE.commented,
+        STORE.commentedText,
+        B.commentedCountStat,
+        B.commentedLinksView
+      );
+    });
+    B.removedLinksBox?.addEventListener('input', () => {
+      syncHistoryInput(
+        B.removedLinksBox,
+        STORE.removed,
+        STORE.removedText,
+        B.removedCountStat,
+        B.removedLinksView
+      );
+    });
   }
 
   function filterLinksAgainstHistory(links) {
@@ -334,9 +420,13 @@
   function saveCommentedLink(link) {
     const list = getCommentedLinks();
     const clean = normalizeUrl(link);
-    if (clean && !list.includes(clean)) list.unshift(clean);
+    const currentText = getHistoryText(STORE.commentedText, list);
+    const nextText = clean && !list.includes(clean)
+      ? `${clean}${currentText ? `\n${currentText}` : ''}`
+      : currentText;
     removePostCaption(clean);
-    save(STORE.commented, list);
+    save(STORE.commentedText, nextText);
+    save(STORE.commented, extractHistoryLinks(nextText));
     renderCommentedLinks();
     syncPostLinksInput();
   }
@@ -344,9 +434,13 @@
   function saveRemovedLink(link) {
     const list = getRemovedLinks();
     const clean = normalizeUrl(link);
-    if (clean && !list.includes(clean)) list.unshift(clean);
+    const currentText = getHistoryText(STORE.removedText, list);
+    const nextText = clean && !list.includes(clean)
+      ? `${clean}${currentText ? `\n${currentText}` : ''}`
+      : currentText;
     removePostCaption(clean);
-    save(STORE.removed, list);
+    save(STORE.removedText, nextText);
+    save(STORE.removed, extractHistoryLinks(nextText));
     renderRemovedLinks();
     syncPostLinksInput();
   }
@@ -459,6 +553,7 @@
     getRemovedLinks,
     saveRemovedLink,
     renderRemovedLinks,
+    wireHistoryInputs,
     filterLinksAgainstHistory,
     filterNewLinks,
     getPostCaptionMap,

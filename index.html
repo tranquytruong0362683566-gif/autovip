@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=20260720-v113-hacker">
   <link rel="manifest" href="./site.webmanifest?v=20260720-v113-hacker">
   <link rel="stylesheet" href="./incokit-workflow-v1.0.5.css?v=20260720-115-transparent-all-panels">
-  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260721-190-clock-in-screen-auto-button">
+  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260721-201-center-modal-editable-history">
 </head>
 <body>
   <canvas id="magnetic-grid" aria-hidden="true"></canvas>
@@ -87,15 +87,18 @@
       </div>
 
       <aside class="system-side-panel">
-        <div class="facebook-account-bar" id="facebookAccountBar" aria-live="polite">
-          <div class="facebook-account-main">
-            <div class="facebook-account-icon" aria-hidden="true">f</div>
-            <div class="facebook-account-text">
-              <span class="facebook-account-label">Tài Khoản Facebook</span>
-              <strong id="facebookUidDisplay">Đang lấy UID từ Extension...</strong>
+        <div class="facebook-account-section">
+          <div class="facebook-hello" aria-live="polite">Hello: <strong id="facebookNameDisplay">Đang nhận diện tên Facebook...</strong></div>
+          <div class="facebook-account-bar" id="facebookAccountBar" aria-live="polite">
+            <div class="facebook-account-main">
+              <div class="facebook-account-icon" aria-hidden="true">f</div>
+              <div class="facebook-account-text">
+                <span class="facebook-account-label">Tài Khoản Facebook</span>
+                <strong id="facebookUidDisplay">Đang lấy UID từ Extension...</strong>
+              </div>
             </div>
+            <button class="btn btn-danger btn-sm" id="facebookLogoutBtn" type="button" disabled>Đăng Xuất</button>
           </div>
-          <button class="btn btn-danger btn-sm" id="facebookLogoutBtn" type="button" disabled>Đăng Xuất</button>
         </div>
 
         <button class="btn btn-primary dashboard-auto-run-btn" id="dashboardAutoRunBtn" type="button">
@@ -294,8 +297,9 @@
             <button class="btn btn-secondary btn-sm" id="clearCommentedLinksBtn" type="button">Xoá danh sách</button>
           </div>
         </div>
-        <textarea id="commentedLinksBox" readonly spellcheck="false" placeholder="Link gửi bình luận thành công sẽ được chuyển vào đây..."></textarea>
-        <div class="hint">Danh sách này tiếp tục được dùng để lọc trùng ở các lần quét sau.</div>
+        <textarea id="commentedLinksBox" spellcheck="false" placeholder="Có thể dán hoặc chỉnh sửa danh sách link tại đây..."></textarea>
+        <div class="record-links-view" id="commentedLinksView" aria-label="Mở link đã bình luận" aria-live="polite" hidden></div>
+        <div class="hint">Có thể chỉnh sửa hoặc dán thêm nội dung. Các link hợp lệ tiếp tục được dùng để lọc trùng; bấm (xem) để mở link trong tab mới.</div>
       </section>
 
       <section class="record-card card record-removed" aria-labelledby="removedTitle">
@@ -306,8 +310,9 @@
             <button class="btn btn-secondary btn-sm" id="clearRemovedLinksBtn" type="button">Xoá danh sách</button>
           </div>
         </div>
-        <textarea id="removedLinksBox" readonly spellcheck="false" placeholder="Link bị AI xác định là (next) sẽ được chuyển vào đây..."></textarea>
-        <div class="hint">Các link bị loại bỏ vẫn được bộ lọc ghi nhớ để không đưa lại vào hàng đợi.</div>
+        <textarea id="removedLinksBox" spellcheck="false" placeholder="Có thể dán hoặc chỉnh sửa danh sách link tại đây..."></textarea>
+        <div class="record-links-view" id="removedLinksView" aria-label="Mở link đã loại bỏ" aria-live="polite" hidden></div>
+        <div class="hint">Có thể chỉnh sửa hoặc dán thêm nội dung. Các link hợp lệ vẫn được bộ lọc ghi nhớ; bấm (xem) để mở link trong tab mới.</div>
       </section>
 
       <div class="hidden" aria-hidden="true">
@@ -493,10 +498,10 @@
 
   <script src="incokit-ui-v1.0.5.js?v=20260720-113"></script>
   <script src="chatgpt-api.js?v=20260721-145-single-template-store"></script>
-  <script src="bridge-state.js?v=20260721-190-dashboard-auto-button"></script>
+  <script src="bridge-state.js?v=20260721-201-editable-history"></script>
   <script src="bridge-api.js?v=20260720-113"></script>
   <script src="apify-api.js?v=20260721-130"></script>
-  <script src="bridge-workflow.js?v=20260721-190-dashboard-auto-button"></script>
+  <script src="bridge-workflow.js?v=20260721-201-facebook-name"></script>
   <script src="dashboard-v1.4.0.js?v=20260721-145-floating-workspaces"></script>
 </body>
 </html>

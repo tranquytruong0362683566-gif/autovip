@@ -1001,3 +1001,9 @@
 .system-monitor {
   box-shadow: none !important;
 }
+.page-glow {
+  display: none !important;
+}
+body::before {
+  background: transparent !important;
+}

@@ -1,0 +1,98 @@
+AUTOVIP WEB — SYSTEM DASHBOARD + MÈO NỀN TRONG SUỐT v1.4.4
+
+1. Giải nén file ZIP.
+2. Tải TẤT CẢ file bên trong ZIP lên đúng thư mục /autovip/ đang chứa index.html trên GitHub Pages.
+3. Không tải cả thư mục cha lồng thêm một cấp.
+4. Ghi đè toàn bộ file cũ bằng toàn bộ file trong gói v1.4.4.
+5. Đảm bảo dashboard-v1.4.0.css, dashboard-v1.4.0.js, cat-typing-transparent.webp, incokit-workflow-v1.0.5.css và incokit-ui-v1.0.5.js nằm cùng cấp với index.html.
+6. Cài hoặc Reload extension Autovip Full v2.2.0 tại chrome://extensions.
+7. Đóng tab Web Autovip cũ, mở lại:
+   https://tranquytruong0362683566-gif.github.io/autovip/?v=20260721-145-clean-alpha
+8. Nhấn Ctrl + Shift + R một lần.
+
+Web không còn ô Extension ID. Extension tự liên kết bằng content bridge chỉ trên đúng URL /autovip/.
+
+THAY ĐỔI v1.0.5:
+- Giao diện xanh đen theo phong cách Incokit, có nền lưới tương tác theo chuột.
+- Sắp xếp lại chức năng theo đúng trình tự: nguồn nhóm → hàng đợi → soạn bình luận → kết quả.
+- Gộp hai kho mẫu vào một khu vực chung.
+- Tách riêng link bình luận thành công và link bị AI loại bỏ.
+- Cả hai danh sách vẫn được dùng để lọc trùng ở lần quét tiếp theo.
+
+THAY ĐỔI v1.1.0:
+- Giữ nguyên toàn bộ giao diện Incokit v1.0.5.
+- Ghép lại quy trình autogpt-main: quét link nhóm → đọc description → AI phân loại/tạo bình luận → gửi → theo dõi spam → đóng tab → lưu kết quả → nghỉ → lặp vòng.
+- Luồng tự động dùng Apify; luồng quét trực tiếp trong Extension được giữ riêng cho nút quét thủ công.
+- Khôi phục đầy đủ action quét nhóm và đọc bài của Extension.
+- Đồng bộ UID, đăng xuất và đăng nhập Cookie trực tiếp giữa web và Extension.
+
+THAY ĐỔI v1.1.1:
+- Link mới được chuẩn hóa rồi đối chiếu riêng với cả Link đã bình luận thành công và Link đã loại bỏ; chỉ link không trùng mới vào hàng đợi.
+- Sau khi quét và lọc xong, vòng tự động đọc description của link đầu tiên ngay, không chờ thừa.
+- Trước mỗi vòng tự động, web kiểm tra UID; nếu chưa đăng nhập sẽ lấy và xóa dòng Cookie Facebook đầu tiên, login rồi tiếp tục vòng hiện tại.
+
+THAY ĐỔI v1.1.2:
+- Mỗi nhóm Facebook được gọi bằng một Apify Actor run độc lập, đúng nguồn Bài viết mới hoặc Bài viết Top đã chọn.
+- Gửi đồng thời maxResults và giới hạn dataset output theo đúng Số link lấy mỗi nhóm; kết quả phía web tiếp tục được cắt cứng lần cuối nên không thể vượt quá giới hạn.
+- Mỗi lần quét tạo một hàng đợi mới và thay thế kết quả vòng trước, không còn gộp Bài viết Top với Bài viết mới qua các vòng tự động.
+
+THAY ĐỔI v1.1.3:
+- Tăng độ trong suốt của thẻ, khu vực nhập liệu, thanh điều hướng và bảng kết quả để nền lưới hiện rõ hơn mà nội dung vẫn dễ đọc.
+- Tăng độ rõ và độ phản ứng của nền lưới theo vị trí chuột; chế độ Giảm chuyển động của hệ điều hành vẫn giữ tương tác ở mức nhẹ.
+- Bổ sung hover dễ nhận biết cho thẻ chức năng, menu, nút, ô nhập liệu, tài khoản Facebook và các mục kho mẫu.
+- Chỉ thay đổi giao diện và hiệu ứng; giữ nguyên toàn bộ logic Apify, lọc link, bình luận tự động và Extension bridge của v1.1.2.
+
+THAY ĐỔI v1.1.4:
+- Nhận diện ngay trang Facebook hiện “Bạn hiện không xem được nội dung này” khi mở link để bình luận.
+- Trả thông báo “bài viết đã bị xóa”, đóng tab ngay và chuyển link vào Link đã loại bỏ.
+- Bỏ qua thời gian nghỉ của link đã bị xóa để chạy link kế tiếp ngay lập tức.
+
+THAY ĐỔI v1.1.5:
+- Giảm độ đục của toàn bộ thẻ, khung chức năng và khung cài đặt để nhìn rõ nền lưới phía sau.
+- Giảm độ đục của textarea, input, select, trạng thái, kết quả, mẫu và danh sách link bên trong các khung.
+- Giữ nguyên viền, chữ, bố cục và làm trạng thái hover/focus sáng hơn nền thường để dễ thao tác.
+
+THAY ĐỔI v1.3.0:
+- Apify trả dataset rỗng hoặc không có link mới được coi là trạng thái bình thường; vòng tự động nghỉ đúng thời gian cài đặt rồi quét tiếp.
+- Lỗi Apify tạm thời như timeout, mạng, HTTP 408/429/5xx không làm dừng vòng lặp; hệ thống bỏ qua vòng hiện tại và tự thử lại ở vòng sau.
+- Chỉ dừng vì lỗi Apify nghiêm trọng: thiếu/sai token, không có quyền, hết số dư, Actor/nhóm/cấu hình không hợp lệ.
+- Nút Quét thủ công + Rakko luôn mở tab nhóm Facebook mới ở trạng thái active, quét permalink, đóng tab rồi đọc description bằng Rakko API.
+- Quét thủ công không có link trả mã trạng thái bình thường, không còn báo lỗi Extension.
+- Giao diện popup Extension được thiết kế lại đồng nhất với màu sắc, thẻ và bố cục xanh đen của Web AutoVIP.
+
+THAY ĐỔI v1.4.0:
+- Thay phần đầu trang bằng System Dashboard theo bố cục màn hình chương trình: terminal tiến trình, mèo gõ bàn phím, đồng hồ Việt Nam, tài khoản Facebook và ba bước xử lý.
+- Terminal tự nhận trạng thái thật từ vòng chạy, rút gọn thành lệnh và cập nhật bước/tiến độ theo từng link.
+- Mèo và hai tay gõ phím được tạo chuyển động liên tục bằng CSS; không dùng ảnh đứng yên.
+- Đồng hồ luôn hiển thị giờ, ngày và thứ theo múi giờ Asia/Ho_Chi_Minh.
+- Chuyển API ChatGPT, API Apify, nguồn và giới hạn quét vào bảng Cài Đặt API.
+- Chuyển cookie đổi tài khoản Facebook và thời gian vòng chạy vào bảng Cài Đặt WEB.
+- Bỏ khung Cài đặt nâng cao cũ. Hai bảng mới có Lưu Cài Đặt và Huỷ; Huỷ khôi phục giá trị trước khi mở bảng.
+- Giữ nguyên ID, localStorage và toàn bộ logic Apify, Rakko, ChatGPT, hàng đợi, bình luận, đổi UID và Extension bridge.
+
+THAY ĐỔI v1.4.1:
+- Thay hiệu ứng vòng sáng nhỏ bằng hai cánh tay SVG độc lập, bấm phím trái/phải luân phiên với hành trình 13px.
+- Mỗi lần tay hạ xuống, vùng phím tương ứng sáng lên để thấy rõ thao tác gõ.
+- Chuyển ảnh mèo qua bộ lọc SVG: nền trắng/đen của ảnh trở thành trong suốt và màu nền phía sau đồng nhất với màn hình.
+- Thu nhỏ mèo, đưa xuống sát góc dưới bên phải để không che terminal và cân đối với ba khung bên phải.
+- Tăng mã cache lên 20260721-141 để trình duyệt nhận ngay CSS, ảnh và chuyển động mới.
+
+THAY ĐỔI v1.4.2:
+- Dùng trực tiếp GIF gốc 1.126 khung hình để chuyển động chân/tay mèo giống hoàn toàn file mẫu.
+- Loại bỏ toàn bộ hai tay SVG dựng lại ở v1.4.1.
+- Giữ bộ lọc nền trong suốt và vị trí mèo ở góc dưới bên phải.
+- Cắt vùng hiển thị bằng SVG để giữ mèo và bàn phím nhưng không hiện dòng chữ nằm dưới GIF gốc.
+- GIF được cắt đúng đoạn mèo gõ phím và lặp liên tục; phần chữ thừa trong GIF gốc đã được loại bỏ.
+- Tăng mã cache lên 20260721-143 để trình duyệt tải GIF và CSS mới ngay sau khi cập nhật.
+
+THAY ĐỔI v1.4.3:
+- Nền mèo được tách thành alpha trong suốt thật ở từng khung hình, không còn viền vuông hoặc mảng tối.
+- Bỏ lớp glow mờ phía sau mèo, đặt nền ảnh về độ mờ 0 và giữ nét mèo rõ 100%.
+- Tăng mã cache lên 20260721-144 để trình duyệt nhận ngay ảnh mèo trong suốt mới.
+
+
+THAY ĐỔI v1.4.4:
+- Làm lại alpha của từng khung hình mèo từ GIF gốc, ép vùng nền gần trắng về trong suốt tuyệt đối để không còn mảng nền vuông.
+- Giữ nguyên chuyển động tay/chân bấm bàn phím và tốc độ lặp của ảnh động.
+- Thêm mask mờ dần ở mép ảnh, giảm glow và hòa nét mèo vào nền màn hình tốt hơn.
+- Tăng mã cache lên 20260721-145-clean-alpha để trình duyệt tải đúng ảnh mới.

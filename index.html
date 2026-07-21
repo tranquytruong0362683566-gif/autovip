@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=20260720-v113-hacker">
   <link rel="manifest" href="./site.webmanifest?v=20260720-v113-hacker">
   <link rel="stylesheet" href="./incokit-workflow-v1.0.5.css?v=20260720-115-transparent-all-panels">
-  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260721-141-cat-arms">
+  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260721-143-clean-gif">
 </head>
 <body>
   <canvas id="magnetic-grid" aria-hidden="true"></canvas>
@@ -71,7 +71,7 @@
             <div class="cat-typing-scene" aria-label="Mèo đang gõ bàn phím">
               <div class="cat-screen-glow" aria-hidden="true"></div>
               <div class="cat-artboard">
-                <svg class="cat-typing-art" viewBox="0 0 580 580" role="img" aria-label="Mèo đang gõ bàn phím">
+                <svg class="cat-filter-defs" width="0" height="0" aria-hidden="true" focusable="false">
                   <defs>
                     <filter id="catNeonTransparency" x="-12%" y="-12%" width="124%" height="124%" color-interpolation-filters="sRGB">
                       <feColorMatrix type="matrix" values="
@@ -82,25 +82,8 @@
                       </feColorMatrix>
                     </filter>
                   </defs>
-                  <image href="./cat-typing.png?v=20260721-141" x="0" y="0" width="580" height="580" filter="url(#catNeonTransparency)"></image>
                 </svg>
-
-                <svg class="typing-arm-eraser typing-arm-eraser-left" viewBox="0 0 220 84" aria-hidden="true">
-                  <path d="M207 12 C216 14 220 20 217 27 C214 34 204 37 192 36 L47 43 C20 44 7 36 7 25 C7 13 20 7 38 8 L190 8 C196 8 202 9 207 12 Z"></path>
-                </svg>
-                <svg class="typing-arm typing-arm-left" viewBox="0 0 220 84" aria-hidden="true">
-                  <path d="M207 12 C216 14 220 20 217 27 C214 34 204 37 192 36 L47 43 C20 44 7 36 7 25 C7 13 20 7 38 8 L190 8 C196 8 202 9 207 12 Z"></path>
-                </svg>
-
-                <svg class="typing-arm-eraser typing-arm-eraser-right" viewBox="0 0 220 84" aria-hidden="true">
-                  <path d="M206 10 C216 12 220 19 217 26 C214 33 204 36 192 36 L51 47 C26 50 9 42 9 29 C9 16 23 9 41 10 L190 7 C196 7 202 8 206 10 Z"></path>
-                </svg>
-                <svg class="typing-arm typing-arm-right" viewBox="0 0 220 84" aria-hidden="true">
-                  <path d="M206 10 C216 12 220 19 217 26 C214 33 204 36 192 36 L51 47 C26 50 9 42 9 29 C9 16 23 9 41 10 L190 7 C196 7 202 8 206 10 Z"></path>
-                </svg>
-
-                <span class="typing-key typing-key-left" aria-hidden="true"></span>
-                <span class="typing-key typing-key-right" aria-hidden="true"></span>
+                <img class="cat-typing-gif" src="./cat-typing.gif?v=20260721-143" alt="Mèo đang gõ bàn phím">
               </div>
             </div>
           </div>
@@ -522,6 +505,6 @@
   <script src="bridge-api.js?v=20260720-113"></script>
   <script src="apify-api.js?v=20260721-130"></script>
   <script src="bridge-workflow.js?v=20260721-130"></script>
-  <script src="dashboard-v1.4.0.js?v=20260721-141-cat-arms"></script>
+  <script src="dashboard-v1.4.0.js?v=20260721-143-clean-gif"></script>
 </body>
 </html>

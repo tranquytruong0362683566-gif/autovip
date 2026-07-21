@@ -1,11 +1,10 @@
-/* AutoVIP v1.4.1 — system dashboard + independent typing arms. */
+/* AutoVIP v1.4.2 — system dashboard + original animated cat GIF. */
 
 :root {
   --container: 1460px;
   --dashboard-neon: #38f26a;
   --dashboard-neon-soft: rgba(56, 242, 106, .18);
   --dashboard-screen: rgba(1, 10, 5, .86);
-  --cat-screen-fill: #020f08;
 }
 
 .sr-only {
@@ -368,103 +367,26 @@
   right: 0;
   bottom: 0;
   z-index: 2;
-  transform-origin: 55% 62%;
-  animation: cat-type-body 1.15s ease-in-out infinite;
 }
 
-.cat-typing-art {
+.cat-filter-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.cat-typing-gif {
   width: 100%;
   height: 100%;
   display: block;
   position: relative;
   z-index: 2;
-  overflow: visible;
+  object-fit: contain;
+  object-position: center bottom;
   opacity: .92;
-  filter: drop-shadow(0 0 5px rgba(56, 242, 106, .46));
-}
-
-.typing-arm,
-.typing-arm-eraser {
-  position: absolute;
-  overflow: visible;
-  transform-box: fill-box;
-  will-change: transform;
-}
-
-.typing-arm-eraser {
-  z-index: 3;
-}
-
-.typing-arm-eraser path {
-  fill: var(--cat-screen-fill);
-  stroke: var(--cat-screen-fill);
-  stroke-width: 16;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.typing-arm {
-  z-index: 5;
-  filter: drop-shadow(0 0 5px rgba(56, 242, 106, .45));
-}
-
-.typing-arm path {
-  fill: var(--cat-screen-fill);
-  stroke: rgba(93, 255, 130, .94);
-  stroke-width: 3.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-}
-
-.typing-arm-left,
-.typing-arm-eraser-left {
-  width: 31%;
-  height: 11.5%;
-  left: 21.5%;
-  top: 57%;
-  transform: rotate(6deg);
-  transform-origin: 94% 14%;
-}
-
-.typing-arm-right,
-.typing-arm-eraser-right {
-  width: 24%;
-  height: 11%;
-  left: 52%;
-  top: 59%;
-  transform: rotate(-3deg);
-  transform-origin: 94% 12%;
-}
-
-.typing-arm-left {
-  animation: arm-press-left .72s cubic-bezier(.35, 0, .2, 1) infinite;
-}
-
-.typing-arm-right {
-  animation: arm-press-right .72s cubic-bezier(.35, 0, .2, 1) infinite;
-}
-
-.typing-key {
-  width: 7%;
-  height: 1.7%;
-  position: absolute;
-  z-index: 6;
-  border-radius: 2px;
-  background: rgba(102, 255, 136, .32);
-  box-shadow: 0 0 10px rgba(56, 242, 106, .7);
-}
-
-.typing-key-left {
-  left: 32%;
-  top: 65.5%;
-  animation: key-flash-left .72s steps(2, end) infinite;
-}
-
-.typing-key-right {
-  left: 59%;
-  top: 69%;
-  animation: key-flash-right .72s steps(2, end) infinite;
+  clip-path: inset(0 0 29% 0);
+  filter: url("#catNeonTransparency") drop-shadow(0 0 5px rgba(56, 242, 106, .46));
 }
 
 .monitor-stand {
@@ -665,31 +587,6 @@
 @keyframes terminal-status-pulse {
   from { opacity: .54; }
   to { opacity: 1; text-shadow: 0 0 8px rgba(56, 242, 106, .78); }
-}
-
-@keyframes cat-type-body {
-  0%, 100% { transform: translateY(0) rotate(0); }
-  50% { transform: translateY(2px) rotate(.12deg); }
-}
-
-@keyframes arm-press-left {
-  0%, 8%, 48%, 100% { transform: translateY(-2px) rotate(6deg); }
-  18%, 38% { transform: translate(-2px, 11px) rotate(-2deg); }
-}
-
-@keyframes arm-press-right {
-  0%, 50%, 92%, 100% { transform: translateY(-2px) rotate(-3deg); }
-  62%, 82% { transform: translate(2px, 11px) rotate(-10deg); }
-}
-
-@keyframes key-flash-left {
-  0%, 8%, 48%, 100% { opacity: .08; transform: scale(.72); }
-  18%, 38% { opacity: 1; transform: scale(1.18); }
-}
-
-@keyframes key-flash-right {
-  0%, 50%, 92%, 100% { opacity: .08; transform: scale(.72); }
-  62%, 82% { opacity: 1; transform: scale(1.18); }
 }
 
 @keyframes cat-glow {
@@ -901,19 +798,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cat-artboard,
   .cat-screen-glow,
-  .typing-arm,
-  .typing-key,
   .terminal-line.is-running b,
   .hero-process .process-step.is-active span {
     animation-iteration-count: infinite !important;
   }
 
-  .cat-artboard { animation-duration: 1.15s !important; }
   .cat-screen-glow { animation-duration: 1.2s !important; }
-  .typing-arm,
-  .typing-key { animation-duration: .72s !important; }
   .terminal-line.is-running b,
   .hero-process .process-step.is-active span { animation-duration: .8s !important; }
 }

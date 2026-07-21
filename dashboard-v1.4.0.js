@@ -18,7 +18,9 @@
     currentIndex: 0,
     totalLinks: 0,
     activeStage: 'scan',
-    activeSettings: null
+    activeSettings: null,
+    activeWorkspace: null,
+    activeWorkspaceTrigger: null
   };
 
   function normalizeText(value) {
@@ -201,6 +203,7 @@
 
   function openSettings(definition) {
     if (!definition?.modal) return;
+    if (dashboardState.activeWorkspace) closeWorkspace({ restoreFocus: false });
     if (dashboardState.activeSettings && dashboardState.activeSettings !== definition) {
       cancelSettings(dashboardState.activeSettings);
     }
@@ -239,6 +242,100 @@
         cancelSettings(dashboardState.activeSettings);
       }
     });
+  }
+
+  const WORKSPACE_DEFINITIONS = {
+    source: { title: 'Nguồn Bài', icon: '▤' },
+    queue: { title: 'Hàng Đợi', icon: '◎' },
+    composer: { title: 'Soạn Bình Luận & Kết Quả AI', icon: '✎' },
+    templates: { title: 'Kho Mẫu', icon: '◇' },
+    records: { title: 'Kết Quả', icon: '▥' }
+  };
+
+  function getWorkspaceTrigger(target) {
+    return $(`.workspace-trigger[data-workspace-target="${target}"]`);
+  }
+
+  function closeWorkspace({ restoreFocus = true } = {}) {
+    const modal = $('#workspaceModal');
+    if (!modal) return;
+
+    const previousTrigger = dashboardState.activeWorkspaceTrigger;
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+    $$('.workspace-panel.is-workspace-active').forEach(panel => panel.classList.remove('is-workspace-active'));
+    $$('.workspace-trigger').forEach(trigger => {
+      trigger.classList.remove('is-active');
+      trigger.setAttribute('aria-expanded', 'false');
+    });
+
+    dashboardState.activeWorkspace = null;
+    dashboardState.activeWorkspaceTrigger = null;
+    if (!$('.modal-overlay.show')) document.body.style.overflow = '';
+    if (restoreFocus) previousTrigger?.focus({ preventScroll: true });
+  }
+
+  function openWorkspace(target, { focusClose = true } = {}) {
+    const definition = WORKSPACE_DEFINITIONS[target];
+    const modal = $('#workspaceModal');
+    const title = $('#workspaceModalTitle');
+    const icon = $('#workspaceModalIcon');
+    const closeButton = $('#closeWorkspaceModalBtn');
+    const panels = $$(`.workspace-panel[data-workspace-panel="${target}"]`);
+    if (!definition || !modal || !panels.length) return false;
+
+    if (dashboardState.activeSettings) cancelSettings(dashboardState.activeSettings);
+
+    $$('.workspace-panel.is-workspace-active').forEach(panel => panel.classList.remove('is-workspace-active'));
+    panels.forEach(panel => panel.classList.add('is-workspace-active'));
+
+    const trigger = getWorkspaceTrigger(target);
+    $$('.workspace-trigger').forEach(item => {
+      const isActive = item === trigger;
+      item.classList.toggle('is-active', isActive);
+      item.setAttribute('aria-expanded', String(isActive));
+    });
+
+    if (title) title.textContent = definition.title;
+    if (icon) icon.textContent = definition.icon;
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+    dashboardState.activeWorkspace = target;
+    dashboardState.activeWorkspaceTrigger = trigger;
+    document.body.style.overflow = 'hidden';
+
+    const content = $('#workspaceModalContent');
+    if (content) content.scrollTop = 0;
+    if (focusClose) window.requestAnimationFrame(() => closeButton?.focus({ preventScroll: true }));
+    return true;
+  }
+
+  function wireWorkspaceModal() {
+    const modal = $('#workspaceModal');
+    if (!modal) return;
+
+    $$('.workspace-trigger').forEach(trigger => {
+      trigger.addEventListener('click', () => openWorkspace(trigger.dataset.workspaceTarget));
+    });
+
+    $('#closeWorkspaceModalBtn')?.addEventListener('click', () => closeWorkspace());
+    modal.addEventListener('click', event => {
+      if (event.target === modal) closeWorkspace();
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.key !== 'Escape' || !dashboardState.activeWorkspace) return;
+      const hasChildModal = $$('.modal-overlay.show').some(item => item !== modal);
+      if (hasChildModal) return;
+      event.preventDefault();
+      closeWorkspace();
+    });
+
+    window.dashboardWorkspace = {
+      open: (target, options) => openWorkspace(target, options),
+      close: options => closeWorkspace(options),
+      get active() { return dashboardState.activeWorkspace; }
+    };
   }
 
   function getShortTime() {
@@ -492,6 +589,7 @@
     updateVietnamClock();
     dashboardState.clockTimer = window.setInterval(updateVietnamClock, 1000);
     wireSettingsModals();
+    wireWorkspaceModal();
     wireTerminalObservers();
 
     window.addEventListener('pagehide', event => {

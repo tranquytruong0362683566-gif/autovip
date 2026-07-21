@@ -1,4 +1,4 @@
-/* AutoVIP v1.4.4 — clean-alpha animated cat with edge fade. */
+/* AutoVIP v1.4.5 — floating workspace windows and one template store. */
 
 :root {
   --container: 1460px;
@@ -95,6 +95,14 @@
   background: rgba(35, 123, 60, .18);
   border-color: rgba(56, 242, 106, .25);
   transform: translateY(-1px);
+}
+
+.header-nav-item.is-active,
+.header-nav button.header-nav-item.is-active {
+  color: #f0fff4;
+  background: rgba(35, 123, 60, .25);
+  border-color: rgba(56, 242, 106, .48);
+  box-shadow: inset 0 0 18px rgba(56, 242, 106, .08), 0 0 18px rgba(56, 242, 106, .08);
 }
 
 .header-settings-trigger:first-child {
@@ -523,6 +531,151 @@
   margin-top: 22px;
 }
 
+.workspace-overlay {
+  z-index: 95;
+  align-items: flex-start;
+  padding: clamp(12px, 2.2vw, 30px);
+  overflow-y: auto;
+  background: rgba(1, 8, 4, .76);
+  backdrop-filter: blur(13px) saturate(112%);
+  -webkit-backdrop-filter: blur(13px) saturate(112%);
+}
+
+.workspace-modal {
+  width: min(1240px, 100%);
+  max-height: calc(100vh - clamp(24px, 4.4vw, 60px));
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: rgba(5, 19, 10, .91);
+  border-color: rgba(56, 242, 106, .52);
+  box-shadow: 0 34px 100px rgba(0, 0, 0, .78), 0 0 52px rgba(56, 242, 106, .13);
+}
+
+.workspace-modal-toolbar {
+  min-height: 78px;
+  padding: 15px 18px 15px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 auto;
+  gap: 18px;
+  background: linear-gradient(90deg, rgba(16, 54, 27, .76), rgba(5, 20, 11, .86));
+  border-bottom: 1px solid rgba(56, 242, 106, .22);
+}
+
+.workspace-modal-heading {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.workspace-modal-heading > div {
+  min-width: 0;
+}
+
+.workspace-modal-heading h2 {
+  margin: 2px 0 0;
+  color: #edfff2;
+  font-size: clamp(18px, 2vw, 24px);
+  line-height: 1.18;
+}
+
+.workspace-modal-icon,
+.workspace-close-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--dashboard-neon);
+  border: 1px solid rgba(56, 242, 106, .45);
+  background: rgba(5, 28, 13, .72);
+  box-shadow: inset 0 0 14px rgba(56, 242, 106, .08);
+}
+
+.workspace-modal-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  font-family: var(--ink-mono);
+  font-size: 21px;
+}
+
+.workspace-close-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-family: var(--ink-mono);
+  font-size: 27px;
+  line-height: 1;
+  transition: color .16s ease, background .16s ease, border-color .16s ease, transform .14s ease;
+}
+
+.workspace-close-btn:hover {
+  color: #fff;
+  background: rgba(162, 48, 59, .42);
+  border-color: rgba(241, 139, 145, .74);
+  transform: rotate(4deg) scale(1.04);
+}
+
+.workspace-modal-content {
+  min-height: 0;
+  padding: clamp(14px, 2vw, 24px);
+  display: grid;
+  gap: 18px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.workspace-modal-content > .workflow-stack {
+  display: contents;
+  margin: 0;
+}
+
+.workspace-panel {
+  display: none !important;
+}
+
+.workspace-panel.is-workspace-active {
+  display: block !important;
+  margin: 0;
+  animation: workspace-panel-in .18s ease both;
+}
+
+.records-section.workspace-panel.is-workspace-active {
+  display: grid !important;
+}
+
+.workspace-modal-content .workflow-panel,
+.workspace-modal-content .output-box,
+.workspace-modal-content .templates-section,
+.workspace-modal-content .record-card {
+  padding: clamp(18px, 2.2vw, 28px);
+}
+
+.workspace-modal-content .workflow-panel:hover,
+.workspace-modal-content .output-box:hover,
+.workspace-modal-content .templates-section:hover,
+.workspace-modal-content .record-card:hover {
+  transform: none;
+}
+
+.workspace-modal-content .records-intro,
+.workspace-modal-content .records-section,
+.workspace-modal-content .templates-section {
+  margin-top: 0;
+}
+
+.templates-grid-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.templates-grid-single .template-group {
+  width: 100%;
+}
+
 .settings-modal-wide {
   width: min(1040px, 100%);
 }
@@ -592,6 +745,11 @@
 @keyframes process-pulse {
   from { opacity: .62; }
   to { opacity: 1; }
+}
+
+@keyframes workspace-panel-in {
+  from { opacity: 0; transform: translateY(7px) scale(.995); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @media (max-width: 1250px) {
@@ -710,6 +868,26 @@
 
   .settings-modal {
     padding: 18px;
+  }
+
+  .workspace-overlay {
+    padding: 8px;
+  }
+
+  .workspace-modal {
+    max-height: calc(100vh - 16px);
+    border-radius: 15px;
+  }
+
+  .workspace-modal-toolbar {
+    min-height: 68px;
+    padding: 11px 12px 11px 15px;
+  }
+
+  .workspace-modal-icon,
+  .workspace-close-btn {
+    width: 38px;
+    height: 38px;
   }
 }
 

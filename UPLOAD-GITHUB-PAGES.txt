@@ -1,13 +1,13 @@
-AUTOVIP WEB — SYSTEM DASHBOARD + MÈO NỀN TRONG SUỐT v1.4.4
+AUTOVIP WEB — CỬA SỔ CHỨC NĂNG NỔI + MỘT KHO MẪU v1.4.5
 
 1. Giải nén file ZIP.
 2. Tải TẤT CẢ file bên trong ZIP lên đúng thư mục /autovip/ đang chứa index.html trên GitHub Pages.
 3. Không tải cả thư mục cha lồng thêm một cấp.
-4. Ghi đè toàn bộ file cũ bằng toàn bộ file trong gói v1.4.4.
+4. Ghi đè toàn bộ file cũ bằng toàn bộ file trong gói v1.4.5.
 5. Đảm bảo dashboard-v1.4.0.css, dashboard-v1.4.0.js, cat-typing-transparent.webp, incokit-workflow-v1.0.5.css và incokit-ui-v1.0.5.js nằm cùng cấp với index.html.
 6. Cài hoặc Reload extension Autovip Full v2.2.0 tại chrome://extensions.
 7. Đóng tab Web Autovip cũ, mở lại:
-   https://tranquytruong0362683566-gif.github.io/autovip/?v=20260721-145-clean-alpha
+   https://tranquytruong0362683566-gif.github.io/autovip/?v=20260721-145-floating-workspaces
 8. Nhấn Ctrl + Shift + R một lần.
 
 Web không còn ô Extension ID. Extension tự liên kết bằng content bridge chỉ trên đúng URL /autovip/.
@@ -96,3 +96,10 @@ THAY ĐỔI v1.4.4:
 - Giữ nguyên chuyển động tay/chân bấm bàn phím và tốc độ lặp của ảnh động.
 - Thêm mask mờ dần ở mép ảnh, giảm glow và hòa nét mèo vào nền màn hình tốt hơn.
 - Tăng mã cache lên 20260721-145-clean-alpha để trình duyệt tải đúng ảnh mới.
+
+THAY ĐỔI v1.4.5:
+- Nguồn Bài, Hàng Đợi, Soạn Bình Luận, Kho Mẫu và Kết Quả được chuyển thành cửa sổ nổi mở từ danh mục đầu trang.
+- Soạn Bình Luận và Kết Quả Bình Luận AI hiển thị chung trong cùng một cửa sổ.
+- Chỉ còn một Kho mẫu sản phẩm; dữ liệu hai kho cũ được tự gộp một lần và lọc mẫu trùng.
+- Chọn một mẫu sẽ tự chuyển sang cửa sổ Soạn Bình Luận để tiếp tục thao tác.
+- Hỗ trợ đóng cửa sổ bằng nút ×, nhấn Escape hoặc bấm vùng nền tối; giữ nguyên toàn bộ ID và luồng tự động cũ.

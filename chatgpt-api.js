@@ -6,6 +6,7 @@
       storage: {
         leftTemplates: 'truong_ai_commenter_templates_left_v2',
         rightTemplates: 'truong_ai_commenter_templates_right_v2',
+        templatesMigrated: 'truong_ai_commenter_templates_single_migrated_v1',
         history: 'truong_ai_commenter_history_v2',
         draft: 'truong_ai_commenter_draft_v2',
         shopeeTargetCount: 'truong_ai_commenter_shopee_target_count_v1',
@@ -403,9 +404,10 @@
     }
 
     function updateStats() {
-      els.leftTplStat.textContent = String(state.managers.left?.items.length || 0);
-      els.rightTplStat.textContent = String(state.managers.right?.items.length || 0);
-      els.historyStat.textContent = String(loadStorage(APP.storage.history, []).length);
+      const templateCount = state.managers.templates?.items.length || 0;
+      if (els.leftTplStat) els.leftTplStat.textContent = '0';
+      if (els.rightTplStat) els.rightTplStat.textContent = String(templateCount);
+      if (els.historyStat) els.historyStat.textContent = String(loadStorage(APP.storage.history, []).length);
       updateCounters();
     }
 
@@ -882,6 +884,27 @@ Chỉ trả về nội dung bình luận.`;
       if (draft.tone) els.toneSelect.value = draft.tone;
     }
 
+    function migrateTemplatesToSingleStore() {
+      const primary = loadStorage(APP.storage.rightTemplates, []);
+      if (loadStorage(APP.storage.templatesMigrated, false)) return primary;
+
+      const legacy = loadStorage(APP.storage.leftTemplates, []);
+      const seen = new Set();
+      const merged = [...primary, ...legacy].filter(template => {
+        if (!template || typeof template !== 'object') return false;
+        const identity = [template.name, template.product, template.links]
+          .map(value => String(value || '').trim().toLocaleLowerCase('vi-VN'))
+          .join('\u0000');
+        if (seen.has(identity)) return false;
+        seen.add(identity);
+        return true;
+      });
+
+      saveStorage(APP.storage.rightTemplates, merged);
+      saveStorage(APP.storage.templatesMigrated, true);
+      return merged;
+    }
+
     function openModal(modal) {
       if (!modal) return;
       modal.classList.add('show');
@@ -974,7 +997,8 @@ Chỉ trả về nội dung bình luận.`;
           Object.values(state.managers).forEach(mgr => mgr.render());
           updateCounters();
           saveDraft();
-          els.productNameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          window.dashboardWorkspace?.open?.('composer', { focusClose: false });
+          requestAnimationFrame(() => els.productNameInput.scrollIntoView({ behavior: 'smooth', block: 'center' }));
           toast(`Đã áp dụng mẫu: ${tpl.name}`);
         },
 
@@ -1106,8 +1130,7 @@ Chỉ trả về nội dung bình luận.`;
       els.saveHistoryBtn?.addEventListener('click', saveHistory);
       els.btnSaveTpl.addEventListener('click', saveTemplateFromModal);
       els.btnCancelTpl.addEventListener('click', () => closeModal(els.templateModal));
-      $('#btnAddTplLeft').addEventListener('click', () => state.managers.left.openAdd());
-      $('#btnAddTpl').addEventListener('click', () => state.managers.right.openAdd());
+      $('#btnAddTpl')?.addEventListener('click', () => state.managers.templates.openAdd());
 
       [els.articleInput, els.productNameInput, els.productLinkInput, els.shopeeTargetCountInput, els.toneSelect].filter(Boolean).forEach(input => {
         input.addEventListener('input', () => {
@@ -1124,8 +1147,11 @@ Chỉ trả về nội dung bình luận.`;
       });
 
       document.addEventListener('keydown', event => {
-        if (event.key === 'Escape') {
-          [els.templateModal].filter(Boolean).forEach(closeModal);
+        if (event.key === 'Escape' && els.templateModal?.classList.contains('show')) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          closeModal(els.templateModal);
+          return;
         }
         if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
           event.preventDefault();
@@ -1135,17 +1161,12 @@ Chỉ trả về nội dung bình luận.`;
     }
 
     async function init() {
-      state.managers.left = createTemplateManager({
-        key: 'left',
-        listEl: $('#tplListLeft'),
-        storageKey: APP.storage.leftTemplates,
-        label: 'Nhóm mẫu A'
-      });
-      state.managers.right = createTemplateManager({
-        key: 'right',
+      migrateTemplatesToSingleStore();
+      state.managers.templates = createTemplateManager({
+        key: 'templates',
         listEl: $('#tplList'),
         storageKey: APP.storage.rightTemplates,
-        label: 'Nhóm mẫu B'
+        label: 'Kho mẫu sản phẩm'
       });
 
       restoreApiSettings();

@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=20260720-v113-hacker">
   <link rel="manifest" href="./site.webmanifest?v=20260720-v113-hacker">
   <link rel="stylesheet" href="./incokit-workflow-v1.0.5.css?v=20260720-115-transparent-all-panels">
-  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260721-144-transparent-cat">
+  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260721-145-floating-workspaces">
 </head>
 <body>
   <canvas id="magnetic-grid" aria-hidden="true"></canvas>
@@ -35,11 +35,11 @@
         <button class="header-nav-item header-settings-trigger" id="openWebSettingsBtn" type="button" aria-controls="webSettingsModal">
           <span class="nav-glyph" aria-hidden="true">▣</span><span>Cài Đặt WEB</span>
         </button>
-        <a class="header-nav-item" href="#source"><span class="nav-glyph" aria-hidden="true">▤</span><span>Nguồn Bài</span></a>
-        <a class="header-nav-item" href="#queue"><span class="nav-glyph" aria-hidden="true">◎</span><span>Hàng Đợi</span></a>
-        <a class="header-nav-item" href="#composer"><span class="nav-glyph" aria-hidden="true">✎</span><span>Soạn Bình Luận</span></a>
-        <a class="header-nav-item" href="#templates"><span class="nav-glyph" aria-hidden="true">◇</span><span>Kho Mẫu</span></a>
-        <a class="header-nav-item" href="#records"><span class="nav-glyph" aria-hidden="true">▥</span><span>Kết Quả</span></a>
+        <button class="header-nav-item workspace-trigger" type="button" data-workspace-target="source" aria-controls="workspaceModal" aria-expanded="false"><span class="nav-glyph" aria-hidden="true">▤</span><span>Nguồn Bài</span></button>
+        <button class="header-nav-item workspace-trigger" type="button" data-workspace-target="queue" aria-controls="workspaceModal" aria-expanded="false"><span class="nav-glyph" aria-hidden="true">◎</span><span>Hàng Đợi</span></button>
+        <button class="header-nav-item workspace-trigger" type="button" data-workspace-target="composer" aria-controls="workspaceModal" aria-expanded="false"><span class="nav-glyph" aria-hidden="true">✎</span><span>Soạn Bình Luận</span></button>
+        <button class="header-nav-item workspace-trigger" type="button" data-workspace-target="templates" aria-controls="workspaceModal" aria-expanded="false"><span class="nav-glyph" aria-hidden="true">◇</span><span>Kho Mẫu</span></button>
+        <button class="header-nav-item workspace-trigger" type="button" data-workspace-target="records" aria-controls="workspaceModal" aria-expanded="false"><span class="nav-glyph" aria-hidden="true">▥</span><span>Kết Quả</span></button>
       </nav>
     </div>
   </header>
@@ -108,9 +108,30 @@
         </div>
       </aside>
     </section>
+  </main>
 
-    <div class="workflow-stack">
-      <section class="workflow-panel card" id="source" aria-labelledby="autoRunTitle">
+  <footer class="app-footer">
+    <div><span class="brand-logo brand-image small" aria-hidden="true"><img src="./favicon-192x192.png" alt=""></span><strong>Trần Quý Trường</strong></div>
+    <p>AI Auto Comment Facebook · Web + Extension + API</p>
+    <span class="system-online"><i aria-hidden="true"></i> Giao diện sẵn sàng</span>
+  </footer>
+
+  <div class="modal-overlay workspace-overlay" id="workspaceModal" role="dialog" aria-modal="true" aria-labelledby="workspaceModalTitle" aria-hidden="true">
+      <div class="modal workspace-modal">
+        <div class="workspace-modal-toolbar">
+          <div class="workspace-modal-heading">
+            <span class="workspace-modal-icon" id="workspaceModalIcon" aria-hidden="true">▤</span>
+            <div>
+              <span class="section-kicker">CỬA SỔ CHỨC NĂNG</span>
+              <h2 id="workspaceModalTitle">Nguồn Bài</h2>
+            </div>
+          </div>
+          <button class="workspace-close-btn" id="closeWorkspaceModalBtn" type="button" aria-label="Đóng cửa sổ" title="Đóng cửa sổ">×</button>
+        </div>
+
+        <div class="workspace-modal-content" id="workspaceModalContent">
+          <div class="workflow-stack">
+      <section class="workflow-panel card workspace-panel" id="source" data-workspace-panel="source" aria-labelledby="autoRunTitle">
         <div class="panel-heading">
           <div class="step-heading">
             <span class="step-number">01</span>
@@ -142,7 +163,7 @@
         <div class="automation-status" id="bridgeStatus">Sẵn sàng. Tự động dùng Apify; quét thủ công mở tab Facebook mới và dùng Rakko.</div>
       </section>
 
-      <section class="workflow-panel card" id="queue" aria-labelledby="linksTitle">
+      <section class="workflow-panel card workspace-panel" id="queue" data-workspace-panel="queue" aria-labelledby="linksTitle">
         <div class="panel-heading compact">
           <div class="step-heading">
             <span class="step-number">02</span>
@@ -163,7 +184,7 @@
         </div>
       </section>
 
-      <section class="workflow-panel card" id="composer" aria-labelledby="contentTitle">
+      <section class="workflow-panel card workspace-panel" id="composer" data-workspace-panel="composer" aria-labelledby="contentTitle">
         <div class="panel-heading compact">
           <div class="step-heading">
             <span class="step-number">03</span>
@@ -226,12 +247,12 @@
         </div>
       </section>
 
-      <section class="output-box card" aria-live="polite" aria-labelledby="outputTitle">
+      <section class="output-box card workspace-panel" id="composerOutput" data-workspace-panel="composer" aria-live="polite" aria-labelledby="outputTitle">
         <div class="output-header">
           <div class="step-heading">
             <span class="step-number">04</span>
             <div>
-              <span class="section-kicker">KẾT QUẢ</span>
+              <span class="section-kicker">KẾT QUẢ BÌNH LUẬN AI</span>
               <h2 id="outputTitle">Bình luận AI</h2>
             </div>
           </div>
@@ -241,28 +262,20 @@
       </section>
     </div>
 
-    <section class="templates-section card" id="templates" aria-labelledby="templatesTitle">
+    <section class="templates-section card workspace-panel" id="templates" data-workspace-panel="templates" aria-labelledby="templatesTitle">
       <div class="panel-heading compact">
         <div>
           <span class="section-kicker">CÔNG CỤ HỖ TRỢ</span>
           <h2 id="templatesTitle">Kho mẫu sản phẩm</h2>
-          <p>Hai kho mẫu được gom vào một khu vực. Chọn một mẫu để điền nhanh sản phẩm và link vào bước soạn bình luận.</p>
+          <p>Chọn một mẫu để điền nhanh sản phẩm và link vào mục Soạn Bình Luận.</p>
         </div>
         <span class="process-badge">Chọn mẫu → tự điền dữ liệu</span>
       </div>
 
-      <div class="templates-grid">
-        <section class="template-group" aria-labelledby="leftTplTitle">
-          <div class="section-title">
-            <span id="leftTplTitle"><span class="title-icon" aria-hidden="true">A</span> Nhóm mẫu A</span>
-            <button class="btn btn-primary btn-sm" id="btnAddTplLeft" type="button">+ Thêm mẫu</button>
-          </div>
-          <div class="tpl-list" id="tplListLeft" aria-live="polite"></div>
-        </section>
-
+      <div class="templates-grid templates-grid-single">
         <section class="template-group" aria-labelledby="rightTplTitle">
           <div class="section-title">
-            <span id="rightTplTitle"><span class="title-icon" aria-hidden="true">B</span> Nhóm mẫu B</span>
+            <span id="rightTplTitle"><span class="title-icon" aria-hidden="true">◇</span> Kho mẫu sản phẩm</span>
             <button class="btn btn-primary btn-sm" id="btnAddTpl" type="button">+ Thêm mẫu</button>
           </div>
           <div class="tpl-list" id="tplList" aria-live="polite"></div>
@@ -270,7 +283,7 @@
       </div>
     </section>
 
-    <section class="records-section" id="records" aria-labelledby="recordsTitle">
+    <section class="records-section workspace-panel" id="records" data-workspace-panel="records" aria-labelledby="recordsTitle">
       <div class="section-intro records-intro">
         <span class="eyebrow">LỊCH SỬ XỬ LÝ</span>
         <h2 id="recordsTitle">Link được chuyển đúng theo kết quả</h2>
@@ -308,13 +321,9 @@
         <strong id="historyStat">0</strong>
       </div>
     </section>
-  </main>
-
-  <footer class="app-footer">
-    <div><span class="brand-logo brand-image small" aria-hidden="true"><img src="./favicon-192x192.png" alt=""></span><strong>Trần Quý Trường</strong></div>
-    <p>AI Auto Comment Facebook · Web + Extension + API</p>
-    <span class="system-online"><i aria-hidden="true"></i> Giao diện sẵn sàng</span>
-  </footer>
+        </div>
+      </div>
+    </div>
 
   <div class="modal-overlay settings-overlay" id="apiSettingsModal" role="dialog" aria-modal="true" aria-labelledby="apiSettingsTitle">
     <div class="modal settings-modal settings-modal-wide">
@@ -487,11 +496,11 @@
   <div class="toast-host" id="toastHost" aria-live="polite"></div>
 
   <script src="incokit-ui-v1.0.5.js?v=20260720-113"></script>
-  <script src="chatgpt-api.js?v=20260720-113"></script>
+  <script src="chatgpt-api.js?v=20260721-145-single-template-store"></script>
   <script src="bridge-state.js?v=20260721-130"></script>
   <script src="bridge-api.js?v=20260720-113"></script>
   <script src="apify-api.js?v=20260721-130"></script>
   <script src="bridge-workflow.js?v=20260721-130"></script>
-  <script src="dashboard-v1.4.0.js?v=20260721-144-transparent-cat"></script>
+  <script src="dashboard-v1.4.0.js?v=20260721-145-floating-workspaces"></script>
 </body>
 </html>

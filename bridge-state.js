@@ -36,7 +36,10 @@
     clearRemovedLinksBtn: $('#clearRemovedLinksBtn'),
     removedLinksBox: $('#removedLinksBox'),
     removedCountStat: $('#removedCountStat'),
-    footerRemovedCount: $('#footerRemovedCount')
+    footerRemovedCount: $('#footerRemovedCount'),
+    clearErrorLinksBtn: $('#clearErrorLinksBtn'),
+    errorLinksBox: $('#errorLinksBox'),
+    errorCountStat: $('#errorCountStat')
   };
 
   const STORE = {
@@ -52,7 +55,8 @@
     postLinks: 'truong_fb_bridge_post_links_v1',
     postCaptions: 'truong_fb_bridge_post_captions_v1',
     commented: 'truong_fb_bridge_commented_links_v1',
-    removed: 'truong_fb_bridge_removed_links_v1'
+    removed: 'truong_fb_bridge_removed_links_v1',
+    captionErrors: 'truong_fb_bridge_caption_error_links_v1'
   };
 
   const APIFY_ACTOR_IDS = [
@@ -253,13 +257,49 @@
     if (B.footerRemovedCount) B.footerRemovedCount.textContent = String(list.length);
   }
 
+  function getErrorLinkEntries() {
+    const stored = load(STORE.captionErrors, []);
+    const source = Array.isArray(stored) ? stored : [];
+    const entries = [];
+    const seen = new Set();
+
+    for (const item of source) {
+      const rawLink = typeof item === 'string' ? item : (item?.link || item?.url || '');
+      const link = normalizeUrl(rawLink);
+      if (!link || !isGroupPermalinkUrl(link) || seen.has(link)) continue;
+      seen.add(link);
+      entries.push({
+        link,
+        reason: text(typeof item === 'object' && item ? item.reason : '') || 'Không đọc được caption'
+      });
+    }
+
+    return entries;
+  }
+
+  function getErrorLinks() {
+    return getErrorLinkEntries().map(entry => entry.link);
+  }
+
+  function renderErrorLinks() {
+    const entries = getErrorLinkEntries();
+    if (B.errorLinksBox) {
+      B.errorLinksBox.value = entries
+        .map(entry => `${entry.link} | ${entry.reason}`)
+        .join('\n');
+    }
+    if (B.errorCountStat) B.errorCountStat.textContent = String(entries.length);
+  }
+
   function filterLinksAgainstHistory(links) {
     const candidates = uniqueLinks(Array.isArray(links) ? links : parseLines(links));
     const commented = new Set(getCommentedLinks().map(normalizeUrl));
     const removed = new Set(getRemovedLinks().map(normalizeUrl));
+    const errors = new Set(getErrorLinks().map(normalizeUrl));
     const accepted = [];
     const duplicateCommented = [];
     const duplicateRemoved = [];
+    const duplicateErrors = [];
 
     for (const link of candidates) {
       const key = normalizeUrl(link);
@@ -271,6 +311,10 @@
         duplicateRemoved.push(link);
         continue;
       }
+      if (errors.has(key)) {
+        duplicateErrors.push(link);
+        continue;
+      }
       accepted.push(link);
     }
 
@@ -278,7 +322,8 @@
       links: accepted,
       duplicateCommented,
       duplicateRemoved,
-      duplicateHistoryCount: duplicateCommented.length + duplicateRemoved.length,
+      duplicateErrors,
+      duplicateHistoryCount: duplicateCommented.length + duplicateRemoved.length + duplicateErrors.length,
       candidateCount: candidates.length
     };
   }
@@ -433,6 +478,24 @@
     syncPostLinksInput();
   }
 
+  function saveErrorLink(link, reason = 'Không đọc được caption') {
+    const clean = normalizeUrl(link);
+    if (!clean || !isGroupPermalinkUrl(clean)) return false;
+
+    const entries = getErrorLinkEntries()
+      .filter(entry => normalizeUrl(entry.link) !== clean);
+    entries.unshift({
+      link: clean,
+      reason: text(reason) || 'Không đọc được caption'
+    });
+
+    removePostCaption(clean);
+    save(STORE.captionErrors, entries);
+    renderErrorLinks();
+    syncPostLinksInput();
+    return true;
+  }
+
   function wirePostLinksInput() {
     if (!B.fbPostLinkInput) return;
     B.fbPostLinkInput.value = load(STORE.postLinks, '') || '';
@@ -543,6 +606,10 @@
     getRemovedLinks,
     saveRemovedLink,
     renderRemovedLinks,
+    getErrorLinkEntries,
+    getErrorLinks,
+    saveErrorLink,
+    renderErrorLinks,
     filterLinksAgainstHistory,
     filterNewLinks,
     getPostCaptionMap,

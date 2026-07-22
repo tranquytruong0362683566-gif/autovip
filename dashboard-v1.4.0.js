@@ -290,7 +290,7 @@
     records: {
       title: 'Kết Quả',
       icon: '▥',
-      description: 'Theo dõi link đã bình luận thành công và link đã loại bỏ'
+      description: 'Theo dõi link đã bình luận thành công, đã loại bỏ và link lỗi caption'
     }
   };
 

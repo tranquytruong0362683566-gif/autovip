@@ -11,8 +11,8 @@
   <link rel="shortcut icon" href="./favicon.ico?v=20260720-v113-hacker">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=20260720-v113-hacker">
   <link rel="manifest" href="./site.webmanifest?v=20260720-v113-hacker">
-  <link rel="stylesheet" href="./incokit-workflow-v1.0.5.css?v=20260720-115-transparent-all-panels">
-  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260722-159-clean-workspaces-settings-cards">
+  <link rel="stylesheet" href="./incokit-workflow-v1.0.5.css?v=20260722-160-caption-error-links">
+  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260722-160-caption-error-links">
 </head>
 <body>
   <canvas id="magnetic-grid" aria-hidden="true"></canvas>
@@ -252,6 +252,18 @@
         <div class="hint">Các link bị loại bỏ vẫn được bộ lọc ghi nhớ để không đưa lại vào hàng đợi.</div>
       </section>
 
+      <section class="record-card card record-error" aria-labelledby="errorLinksTitle">
+        <div class="section-title" id="errorLinksTitle">
+          <span><span class="record-icon" aria-hidden="true">!</span> Link lỗi</span>
+          <div class="record-actions">
+            <strong class="record-count"><span id="errorCountStat">0</span> link</strong>
+            <button class="btn btn-secondary btn-sm" id="clearErrorLinksBtn" type="button">Xoá danh sách</button>
+          </div>
+        </div>
+        <textarea id="errorLinksBox" readonly spellcheck="false" placeholder="Link không có hoặc không đọc được caption sẽ được chuyển vào đây..."></textarea>
+        <div class="hint">Link lỗi được ghi kèm nguyên nhân và lọc khỏi các vòng quét sau cho đến khi xoá danh sách.</div>
+      </section>
+
       <div class="hidden" aria-hidden="true">
         <strong id="validLinkStat">0</strong>
         <strong id="leftTplStat">0</strong>
@@ -427,10 +439,10 @@
 
   <script src="incokit-ui-v1.0.5.js?v=20260720-113"></script>
   <script src="chatgpt-api.js?v=20260722-159-template-close-save"></script>
-  <script src="bridge-state.js?v=20260722-156-summary-strip"></script>
+  <script src="bridge-state.js?v=20260722-160-caption-error-links"></script>
   <script src="bridge-api.js?v=20260720-113"></script>
   <script src="apify-api.js?v=20260722-156-caption-mapping"></script>
-  <script src="bridge-workflow.js?v=20260722-156-apify-caption"></script>
+  <script src="bridge-workflow.js?v=20260722-160-caption-error-links"></script>
   <script src="dashboard-v1.4.0.js?v=20260722-159-close-save-settings"></script>
 </body>
 </html>

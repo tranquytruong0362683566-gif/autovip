@@ -933,7 +933,7 @@
 
 .records-section.workspace-panel.is-workspace-active {
   display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -1045,7 +1045,8 @@
 }
 
 .workspace-modal-content #commentedLinksBox,
-.workspace-modal-content #removedLinksBox {
+.workspace-modal-content #removedLinksBox,
+.workspace-modal-content #errorLinksBox {
   min-height: 190px;
 }
 

@@ -734,12 +734,16 @@ select { cursor: pointer; }
 .record-card { position: relative; overflow: hidden; }
 .record-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--ink-green-bright), transparent); }
 .record-removed::before { background: linear-gradient(90deg, transparent, var(--ink-warning), transparent); }
+.record-error::before { background: linear-gradient(90deg, transparent, var(--ink-danger), transparent); }
 .record-actions { display: flex; align-items: center; gap: 10px; }
 .record-count { color: var(--ink-green-bright); font-family: var(--ink-mono); font-size: 11px; }
 .record-removed .record-count { color: var(--ink-warning); }
 .record-removed .record-icon { color: var(--ink-warning); background: rgba(74, 53, 15, .38); border-color: rgba(245, 179, 66, .22); }
-#commentedLinksBox, #removedLinksBox { min-height: 210px; color: #a9cbb3; background: rgba(7, 17, 11, .58); font-size: 10px; line-height: 1.7; }
+.record-error .record-count { color: var(--ink-danger); }
+.record-error .record-icon { color: var(--ink-danger); background: var(--ink-danger-soft); border-color: rgba(241, 139, 145, .28); }
+#commentedLinksBox, #removedLinksBox, #errorLinksBox { min-height: 210px; color: #a9cbb3; background: rgba(7, 17, 11, .58); font-size: 10px; line-height: 1.7; }
 #removedLinksBox { color: #cfb887; }
+#errorLinksBox { color: #e7a7ac; }
 
 .app-footer {
   padding: 38px max(24px, calc((100vw - var(--container)) / 2 + 24px));

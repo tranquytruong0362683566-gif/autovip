@@ -33,6 +33,16 @@
     'FACEBOOK_FEATURE_RESTRICTED'
   ]);
 
+  const CAPTION_FAILURE_CODES = new Set([
+    'APIFY_CAPTION_MISSING',
+    'CAPTION_READ_FAILED'
+  ]);
+
+  const BRIDGE_CONNECTIVITY_ERROR_CODES = new Set([
+    'BRIDGE_DISCONNECTED',
+    'BRIDGE_TIMEOUT'
+  ]);
+
   function reportProcess(detail = {}) {
     if (typeof S.reportProcess === 'function') S.reportProcess(detail);
   }
@@ -66,6 +76,23 @@
     const fatalError = error instanceof Error ? error : new Error(String(error || 'Lỗi nghiêm trọng.'));
     fatalError.stopClosedLoop = true;
     return fatalError;
+  }
+
+  function isBridgeConnectivityError(error) {
+    const code = S.text(error?.code);
+    if (BRIDGE_CONNECTIVITY_ERROR_CODES.has(code)) return true;
+    return /chưa phát hiện extension|kết nối extension.*(?:ngắt|lỗi)|message port|receiving end|port closed/i
+      .test(String(error?.message || error || ''));
+  }
+
+  function isCaptionFailureError(error) {
+    return CAPTION_FAILURE_CODES.has(S.text(error?.code));
+  }
+
+  function captionFailureReason(error) {
+    return S.text(error?.code) === 'APIFY_CAPTION_MISSING'
+      ? 'Không có caption'
+      : 'Không đọc được caption';
   }
 
   function updateKnownFacebookAccount(loggedIn, uid) {
@@ -690,7 +717,7 @@
       : { saved: 0, failed: 0 };
     const queuedLinks = S.getPostLinks();
     const historyText = filtered.duplicateHistoryCount
-      ? ` Đã xóa ${filtered.duplicateHistoryCount} link trùng lịch sử (${filtered.duplicateCommented.length} đã bình luận, ${filtered.duplicateRemoved.length} đã loại bỏ).`
+      ? ` Đã xóa ${filtered.duplicateHistoryCount} link trùng lịch sử (${filtered.duplicateCommented.length} đã bình luận, ${filtered.duplicateRemoved.length} đã loại bỏ, ${filtered.duplicateErrors.length} link lỗi).`
       : '';
 
     if (links.length) {
@@ -899,7 +926,7 @@
     S.setPostLinks(links);
     const queuedLinks = S.getPostLinks();
     const historyText = filtered.duplicateHistoryCount
-      ? ` Đã xóa ${filtered.duplicateHistoryCount} link trùng lịch sử (${filtered.duplicateCommented.length} đã bình luận, ${filtered.duplicateRemoved.length} đã loại bỏ).`
+      ? ` Đã xóa ${filtered.duplicateHistoryCount} link trùng lịch sử (${filtered.duplicateCommented.length} đã bình luận, ${filtered.duplicateRemoved.length} đã loại bỏ, ${filtered.duplicateErrors.length} link lỗi).`
       : '';
 
     if (links.length) {
@@ -1137,9 +1164,43 @@
       throw error;
     }
 
-    S.setBridgeStatus('Nội dung ghép sẵn của link này đang rỗng. Đang gọi Rakko API làm dự phòng...', 'warn');
-    const article = await readFirstFacebookPost(link);
-    return { article, source: 'read_api_fallback' };
+    const maxAttempts = 2;
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        S.setBridgeStatus(
+          `Nội dung ghép sẵn của link này đang rỗng. Đang gọi Rakko API làm dự phòng lần ${attempt}/${maxAttempts}...`,
+          'warn'
+        );
+        const article = await readFirstFacebookPost(link);
+        if (!S.text(article)) throw new Error('Rakko không trả caption cho link này.');
+        return { article, source: 'read_api_fallback' };
+      } catch (error) {
+        if (isBridgeConnectivityError(error) || isFatalClosedLoopError(error)) throw error;
+        lastError = error;
+        await closeActiveReadTabIfAny();
+
+        if (attempt < maxAttempts) {
+          reportProcess({
+            actionKey: 'rakko-caption-retry',
+            title: `Rakko chưa đọc được caption · thử lại ${attempt + 1}/${maxAttempts}`,
+            detail: error.message || String(error),
+            status: 'wait',
+            stage: 'scan',
+            source: 'Rakko API',
+            target: link,
+            targetLabel: 'LINK ĐANG THỬ LẠI',
+            countdown: 1
+          });
+          await S.delay(1000);
+        }
+      }
+    }
+
+    const error = new Error(`Không đọc được caption sau ${maxAttempts} lần thử: ${lastError?.message || lastError || 'Rakko không trả dữ liệu.'}`);
+    error.code = 'CAPTION_READ_FAILED';
+    throw error;
   }
 
   async function commentToFacebook(link, comment) {
@@ -1424,6 +1485,31 @@
             S.setBridgeStatus(fatalStopMessage, 'error');
             break;
           }
+
+          if (isCaptionFailureError(error)) {
+            const reason = captionFailureReason(error);
+            await closeActiveReadTabIfAny();
+            S.saveErrorLink(link, reason);
+            S.setBridgeStatus(`${reason} ở link ${index + 1}/${queue.length}. Đã chuyển link vào ô Link lỗi và tiếp tục link kế tiếp.`, 'error');
+            reportProcess({
+              actionKey: `caption-link-error-${index + 1}`,
+              title: reason,
+              detail: `${error.message || error} Link đã được xóa khỏi hàng đợi hiện tại.`,
+              status: 'error',
+              stage: 'scan',
+              ...queueProcessMeta(index + 1, queue.length),
+              source: S.text(error?.code) === 'APIFY_CAPTION_MISSING' ? 'Caption Apify' : 'Rakko API',
+              target: link,
+              targetLabel: 'LINK LỖI',
+              countdown: null,
+              statDelta: { errors: 1 },
+              historyMessage: `${reason}: ${link} · đã chuyển vào Link lỗi`,
+              historyTag: 'ERROR',
+              historyLevel: 'error'
+            });
+            continue;
+          }
+
           S.setBridgeStatus(`Lỗi ở link hiện tại, đã chuyển link kế tiếp:\n${error.message || error}`, 'error');
           reportProcess({
             actionKey: `queue-link-error-${index + 1}`,
@@ -1700,6 +1786,7 @@
     S.getLinkPauseSeconds();
     S.renderCommentedLinks();
     S.renderRemovedLinks();
+    S.renderErrorLinks();
 
     B.facebookLogoutBtn?.addEventListener('click', () => {
       logoutFacebookAccount().catch(() => {});
@@ -1758,6 +1845,12 @@
       S.save(S.STORE.removed, []);
       S.renderRemovedLinks();
       S.setBridgeStatus('Đã xoá danh sách link đã loại bỏ.', 'ok');
+    });
+    B.clearErrorLinksBtn?.addEventListener('click', () => {
+      if (!confirm('Xoá toàn bộ danh sách link lỗi caption?')) return;
+      S.save(S.STORE.captionErrors, []);
+      S.renderErrorLinks();
+      S.setBridgeStatus('Đã xoá danh sách link lỗi caption.', 'ok');
     });
   }
 

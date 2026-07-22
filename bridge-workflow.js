@@ -301,9 +301,12 @@
     const cleanUid = S.text(uid);
     setFacebookHello(loggedIn, cleanUid, name);
     if (B.facebookUidDisplay) {
-      B.facebookUidDisplay.textContent = message || (loggedIn && cleanUid
-        ? `UID đang đăng nhập: ${cleanUid}`
-        : 'Chưa phát hiện tài khoản Facebook đang đăng nhập.');
+      B.facebookUidDisplay.textContent = loggedIn && cleanUid
+        ? cleanUid
+        : (message || 'Chưa đăng nhập');
+      B.facebookUidDisplay.title = loggedIn && cleanUid
+        ? `UID Facebook đang đăng nhập: ${cleanUid}`
+        : (message || 'Chưa phát hiện tài khoản Facebook đang đăng nhập.');
     }
     B.facebookAccountBar?.classList.toggle('logged-in', Boolean(loggedIn && cleanUid));
     B.facebookAccountBar?.classList.toggle('account-error', Boolean(error));

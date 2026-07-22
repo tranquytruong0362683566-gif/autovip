@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=20260720-v113-hacker">
   <link rel="manifest" href="./site.webmanifest?v=20260720-v113-hacker">
   <link rel="stylesheet" href="./incokit-workflow-v1.0.5.css?v=20260720-115-transparent-all-panels">
-  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260722-152-history-only">
+  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260722-153-inline-account">
 </head>
 <body>
   <canvas id="magnetic-grid" aria-hidden="true"></canvas>
@@ -50,8 +50,13 @@
 
       <div class="system-monitor-column">
         <div class="system-monitor">
-          <div class="monitor-toolbar" aria-hidden="true">
-            <span></span><span></span><span></span>
+          <div class="monitor-toolbar">
+            <div class="monitor-account-inline" id="facebookAccountBar" aria-live="polite">
+              <span class="monitor-facebook-icon" aria-hidden="true">f</span>
+              <span class="monitor-account-label">UID:</span>
+              <strong id="facebookUidDisplay">Đang lấy UID...</strong>
+              <button class="monitor-logout-link" id="facebookLogoutBtn" type="button" disabled>Đăng xuất</button>
+            </div>
             <strong>AI AUTO COMMENT / LIVE PROCESS</strong>
           </div>
           <div class="monitor-screen">
@@ -92,19 +97,6 @@
       </div>
 
       <aside class="system-side-panel">
-        <div class="facebook-account-section">
-          <div class="facebook-account-bar" id="facebookAccountBar" aria-live="polite">
-            <div class="facebook-account-main">
-              <div class="facebook-account-icon" aria-hidden="true">f</div>
-              <div class="facebook-account-text">
-                <span class="facebook-account-label">Tài Khoản Facebook</span>
-                <strong id="facebookUidDisplay">Đang lấy UID từ Extension...</strong>
-              </div>
-            </div>
-            <button class="btn btn-danger btn-sm" id="facebookLogoutBtn" type="button" disabled>Đăng Xuất</button>
-          </div>
-        </div>
-
         <button class="btn btn-primary dashboard-auto-run-btn" id="dashboardAutoRunBtn" type="button">
           <span class="dashboard-auto-run-icon" aria-hidden="true">▶</span>
           <span>Chạy Tự Động</span>
@@ -499,7 +491,7 @@
   <script src="bridge-state.js?v=20260722-152-history-only"></script>
   <script src="bridge-api.js?v=20260720-113"></script>
   <script src="apify-api.js?v=20260722-151-group-progress"></script>
-  <script src="bridge-workflow.js?v=20260722-152-history-only"></script>
-  <script src="dashboard-v1.4.0.js?v=20260722-152-history-only"></script>
+  <script src="bridge-workflow.js?v=20260722-153-inline-account"></script>
+  <script src="dashboard-v1.4.0.js?v=20260722-153-inline-account"></script>
 </body>
 </html>

@@ -5,7 +5,7 @@
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 
   const VIETNAM_TIME_ZONE = 'Asia/Ho_Chi_Minh';
-  const MAX_TERMINAL_LINES = 10;
+  const MAX_TERMINAL_LINES = 13;
 
   const dashboardState = {
     initialized: false,

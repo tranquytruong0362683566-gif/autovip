@@ -150,8 +150,7 @@
       api: {
         modal: $('#apiSettingsModal'),
         openButton: $('#openApiSettingsBtn'),
-        saveButton: $('#saveApiSettingsBtn'),
-        cancelButton: $('#cancelApiSettingsBtn'),
+        closeButton: $('#closeApiSettingsBtn'),
         fieldIds: [
           'chatApiEndpointInput',
           'chatApiModelInput',
@@ -166,8 +165,7 @@
       web: {
         modal: $('#webSettingsModal'),
         openButton: $('#openWebSettingsBtn'),
-        saveButton: $('#saveWebSettingsBtn'),
-        cancelButton: $('#cancelWebSettingsBtn'),
+        closeButton: $('#closeWebSettingsBtn'),
         fieldIds: [
           'facebookCookiesInput',
           'loopPauseSecondsInput',
@@ -230,7 +228,7 @@
     if (!definition?.modal) return;
     if (dashboardState.activeWorkspace) closeWorkspace({ restoreFocus: false });
     if (dashboardState.activeSettings && dashboardState.activeSettings !== definition) {
-      cancelSettings(dashboardState.activeSettings);
+      saveSettings(dashboardState.activeSettings);
     }
 
     definition.snapshot = new Map(definition.fieldIds.map(id => {
@@ -254,17 +252,16 @@
       if (!definition.modal || !definition.openButton) return;
       definition.openButton.setAttribute('aria-expanded', 'false');
       definition.openButton.addEventListener('click', () => openSettings(definition));
-      definition.saveButton?.addEventListener('click', () => saveSettings(definition));
-      definition.cancelButton?.addEventListener('click', () => cancelSettings(definition));
+      definition.closeButton?.addEventListener('click', () => saveSettings(definition));
       definition.modal.addEventListener('click', event => {
-        if (event.target === definition.modal) cancelSettings(definition);
+        if (event.target === definition.modal) saveSettings(definition);
       });
     });
 
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape' && dashboardState.activeSettings) {
         event.preventDefault();
-        cancelSettings(dashboardState.activeSettings);
+        saveSettings(dashboardState.activeSettings);
       }
     });
   }
@@ -368,7 +365,6 @@
     });
 
     $('#closeWorkspaceModalBtn')?.addEventListener('click', () => closeWorkspace());
-    $('#closeWorkspaceFooterBtn')?.addEventListener('click', () => closeWorkspace());
     modal.addEventListener('click', event => {
       if (event.target === modal) closeWorkspace();
     });

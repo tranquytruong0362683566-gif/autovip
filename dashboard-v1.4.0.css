@@ -1127,6 +1127,10 @@
   min-width: 0;
 }
 
+.modal-heading > .workspace-close-btn {
+  margin-left: auto;
+}
+
 .settings-modal-heading p {
   margin: 3px 0 0;
   color: var(--ink-text-dim);
@@ -1144,10 +1148,10 @@
 }
 
 .settings-section {
-  padding: 2px;
-  background: transparent;
-  border-color: transparent;
-  border-radius: 0;
+  padding: 18px;
+  background: rgba(6, 24, 12, .34);
+  border-color: rgba(56, 242, 106, .22);
+  border-radius: 14px;
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -1155,6 +1159,15 @@
 
 .settings-section:hover {
   transform: none;
+  border-color: rgba(56, 242, 106, .34);
+}
+
+.workspace-utility-row {
+  min-height: 28px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .settings-modal .auth-bar {

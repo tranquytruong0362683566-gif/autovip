@@ -57,8 +57,7 @@
       tplNameInput: $('#tplNameInput'),
       tplProductInput: $('#tplProductInput'),
       tplLinksInput: $('#tplLinksInput'),
-      btnSaveTpl: $('#btnSaveTpl'),
-      btnCancelTpl: $('#btnCancelTpl'),
+      closeTemplateModalBtn: $('#closeTemplateModalBtn'),
       toastHost: $('#toastHost')
     };
 
@@ -1102,6 +1101,32 @@ Chỉ trả về nội dung bình luận.`;
       toast('Đã lưu mẫu sản phẩm');
     }
 
+    function saveAndCloseTemplateModal() {
+      const name = els.tplNameInput.value.trim();
+      const product = els.tplProductInput.value.trim();
+      const links = els.tplLinksInput.value.trim();
+
+      if (!name && !product && !links) {
+        closeModal(els.templateModal);
+        return;
+      }
+
+      if (!name || !product) {
+        closeModal(els.templateModal);
+        toast('Mẫu chưa đủ tên và sản phẩm nên không được lưu.', 'warning');
+        return;
+      }
+
+      const parsed = parseLinks(links);
+      if (links && !parsed.valid.length) {
+        closeModal(els.templateModal);
+        toast('Mẫu có danh sách link không hợp lệ nên chưa được lưu.', 'warning');
+        return;
+      }
+
+      saveTemplateFromModal();
+    }
+
     function wireEvents() {
       [els.chatApiEndpointInput, els.chatApiKeyInput, els.chatApiModelInput].filter(Boolean).forEach(input => {
         input.addEventListener('input', () => {
@@ -1128,8 +1153,7 @@ Chỉ trả về nội dung bình luận.`;
       els.pasteBtn.addEventListener('click', pasteArticle);
       els.copyBtn?.addEventListener('click', () => copyText(els.output.textContent));
       els.saveHistoryBtn?.addEventListener('click', saveHistory);
-      els.btnSaveTpl.addEventListener('click', saveTemplateFromModal);
-      els.btnCancelTpl.addEventListener('click', () => closeModal(els.templateModal));
+      els.closeTemplateModalBtn?.addEventListener('click', saveAndCloseTemplateModal);
       $('#btnAddTpl')?.addEventListener('click', () => state.managers.templates.openAdd());
 
       [els.articleInput, els.productNameInput, els.productLinkInput, els.shopeeTargetCountInput, els.toneSelect].filter(Boolean).forEach(input => {

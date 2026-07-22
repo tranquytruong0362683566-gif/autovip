@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=20260720-v113-hacker">
   <link rel="manifest" href="./site.webmanifest?v=20260720-v113-hacker">
   <link rel="stylesheet" href="./incokit-workflow-v1.0.5.css?v=20260720-115-transparent-all-panels">
-  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260721-205-facebook-hello-centered-workspaces">
+  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260722-151-professional-live-process">
 </head>
 <body>
   <canvas id="magnetic-grid" aria-hidden="true"></canvas>
@@ -65,6 +65,35 @@
 
             <div class="terminal-panel" aria-live="polite" aria-atomic="false">
               <div class="terminal-command"><span>$</span> autovip --target facebook --mode comment</div>
+              <div class="terminal-current" id="systemProcessLive">
+                <div class="terminal-current-heading">
+                  <span class="terminal-state-badge is-ready" id="systemProcessBadge">READY</span>
+                  <strong id="systemProcessTitle">Hệ thống sẵn sàng nhận lệnh</strong>
+                  <time id="systemElapsedTime" datetime="PT0S">00:00</time>
+                </div>
+                <p class="terminal-current-detail" id="systemProcessDetail">Chưa có tác vụ đang chạy.</p>
+                <div class="terminal-current-meta">
+                  <span>Vòng <b id="systemCycleValue">--</b></span>
+                  <span>Hàng đợi <b id="systemQueueValue">0/0</b></span>
+                  <span>Còn lại <b id="systemRemainingValue">0</b></span>
+                  <span>Nguồn <b id="systemSourceValue">--</b></span>
+                </div>
+                <div class="terminal-current-target">
+                  <span id="systemCurrentTargetLabel">LINK HIỆN TẠI</span>
+                  <strong id="systemCurrentLink" title="">Chưa có link đang xử lý</strong>
+                </div>
+                <div class="terminal-wait-row hidden" id="systemCountdownRow">
+                  <span>WAIT</span>
+                  <strong id="systemCountdownLabel">Đang chờ</strong>
+                  <time id="systemCountdownValue" datetime="PT0S">00:00</time>
+                </div>
+                <div class="terminal-cycle-stats" aria-label="Kết quả vòng hiện tại">
+                  <span class="is-success">✓ <b id="systemSuccessCount">0</b></span>
+                  <span class="is-skipped">↷ <b id="systemSkippedCount">0</b></span>
+                  <span class="is-error">! <b id="systemErrorCount">0</b></span>
+                </div>
+              </div>
+              <div class="terminal-history-title"><span>LỊCH SỬ HOẠT ĐỘNG</span><i></i></div>
               <div class="terminal-log" id="systemTerminalLog">
                 <div class="terminal-line is-ok"><span>&gt;</span><em>Khởi tạo giao diện hệ thống...</em><b>[OK]</b></div>
                 <div class="terminal-line is-running"><span>&gt;</span><em>Đang kết nối luồng tự động...</em><b>[RUNNING]</b></div>
@@ -141,10 +170,10 @@
             <div>
               <span class="section-kicker">NGUỒN BÀI VIẾT</span>
               <h2 id="autoRunTitle">Nhóm Facebook và chế độ chạy</h2>
-              <p>Chạy tự động dùng Apify. Quét thủ công sẽ mở tab nhóm Facebook mới, lấy permalink rồi ghép description bằng Rakko.</p>
+              <p>Lấy Link API chỉ quét Apify một lần và nạp kết quả vào hàng đợi. Quét thủ công sẽ mở tab nhóm Facebook mới rồi ghép description bằng Rakko.</p>
             </div>
           </div>
-          <span class="process-badge">Apify tự động · Facebook + Rakko thủ công</span>
+          <span class="process-badge">Apify lấy link · Facebook + Rakko thủ công</span>
         </div>
 
         <div class="form-group">
@@ -153,17 +182,12 @@
           <div class="hint">Chỉ cần nhập lần đầu. Danh sách được lưu để dùng cho các vòng quét tiếp theo.</div>
         </div>
 
-        <div class="action-cluster" role="group" aria-label="Các chế độ chạy">
-          <div class="action-primary-group">
-            <button class="btn btn-primary btn-main-action" id="scanGroupLinksBtn" type="button"><span aria-hidden="true">▶</span> Chạy tự động bằng API</button>
-            <button class="btn btn-danger hidden" id="stopClosedLoopBtn" type="button"><span aria-hidden="true">■</span> Dừng</button>
-          </div>
-          <div class="action-secondary-group">
-            <button class="btn btn-secondary" id="apifyScanBtn" type="button"><span aria-hidden="true">⌁</span> Quét thủ công + Rakko</button>
-            <button class="btn btn-secondary" id="autoWorkflowBtn" type="button"><span aria-hidden="true">▷</span> Chạy link hiện có</button>
-          </div>
+        <div class="source-action-grid" role="group" aria-label="Các chế độ lấy và chạy link">
+          <button class="btn btn-primary btn-main-action" id="scanGroupLinksBtn" type="button"><span aria-hidden="true">⌁</span> Lấy Link API</button>
+          <button class="btn btn-secondary btn-main-action" id="apifyScanBtn" type="button"><span aria-hidden="true">▤</span> Quét Thủ Công + Rakko</button>
+          <button class="btn btn-secondary btn-main-action" id="autoWorkflowBtn" type="button"><span aria-hidden="true">▷</span> Chạy Link Hiện Có</button>
         </div>
-        <div class="automation-status" id="bridgeStatus">Sẵn sàng. Tự động dùng Apify; quét thủ công mở tab Facebook mới và dùng Rakko.</div>
+        <button class="btn btn-danger source-stop-button hidden" id="stopClosedLoopBtn" type="button"><span aria-hidden="true">■</span> Dừng Chạy Tự Động</button>
       </section>
 
       <section class="workflow-panel card workspace-panel" id="queue" data-workspace-panel="queue" aria-labelledby="linksTitle">
@@ -496,14 +520,15 @@
     </div>
   </div>
 
+  <div class="automation-status-source hidden" id="bridgeStatus" aria-live="polite">Sẵn sàng. Tự động dùng Apify; quét thủ công mở tab Facebook mới và dùng Rakko.</div>
   <div class="toast-host" id="toastHost" aria-live="polite"></div>
 
   <script src="incokit-ui-v1.0.5.js?v=20260720-113"></script>
   <script src="chatgpt-api.js?v=20260721-145-single-template-store"></script>
-  <script src="bridge-state.js?v=20260721-205-facebook-hello"></script>
+  <script src="bridge-state.js?v=20260722-151-professional-live-process"></script>
   <script src="bridge-api.js?v=20260720-113"></script>
-  <script src="apify-api.js?v=20260721-130"></script>
-  <script src="bridge-workflow.js?v=20260721-205-facebook-name-bridge"></script>
-  <script src="dashboard-v1.4.0.js?v=20260721-145-floating-workspaces"></script>
+  <script src="apify-api.js?v=20260722-151-group-progress"></script>
+  <script src="bridge-workflow.js?v=20260722-151-api-link-only"></script>
+  <script src="dashboard-v1.4.0.js?v=20260722-151-professional-live-process"></script>
 </body>
 </html>

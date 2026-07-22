@@ -298,12 +298,188 @@
   margin-right: 7px;
 }
 
+.terminal-current {
+  width: 59%;
+  margin-bottom: 10px;
+  padding: 10px;
+  display: grid;
+  gap: 7px;
+  color: #c7d9cb;
+  background: linear-gradient(145deg, rgba(5, 28, 12, .78), rgba(2, 15, 7, .64));
+  border: 1px solid rgba(56, 242, 106, .25);
+  border-left: 3px solid var(--dashboard-neon);
+  border-radius: 8px;
+  box-shadow: inset 0 0 22px rgba(56, 242, 106, .035);
+}
+
+.terminal-current-heading {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.terminal-current-heading > strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #e0eee3;
+  font-size: clamp(9px, .78vw, 11px);
+  font-weight: 700;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terminal-current-heading > time {
+  min-width: 34px;
+  color: #8fb59a;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.terminal-state-badge {
+  min-width: 45px;
+  padding: 3px 5px;
+  color: #051108;
+  background: var(--dashboard-neon);
+  border-radius: 4px;
+  font-size: 7.5px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  line-height: 1;
+  text-align: center;
+}
+
+.terminal-state-badge.is-ready,
+.terminal-state-badge.is-ok { background: var(--dashboard-neon); }
+.terminal-state-badge.is-running { color: #041006; background: #84ff9d; animation: terminal-status-pulse .85s ease-in-out infinite alternate; }
+.terminal-state-badge.is-wait { color: #241a05; background: var(--ink-warning); }
+.terminal-state-badge.is-error { color: #250508; background: var(--ink-danger); }
+.terminal-state-badge.is-next { color: #251b06; background: #f5c55e; }
+.terminal-state-badge.is-stop { color: #f7cbcf; background: rgba(193, 65, 75, .44); }
+
+.terminal-current-detail {
+  min-height: 13px;
+  margin: 0;
+  overflow: hidden;
+  color: #9eb3a3;
+  font-size: clamp(8px, .67vw, 9.5px);
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terminal-current-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.terminal-current-meta > span {
+  min-width: 0;
+  padding: 4px 5px;
+  overflow: hidden;
+  color: #789183;
+  background: rgba(0, 9, 3, .4);
+  border: 1px solid rgba(56, 242, 106, .1);
+  border-radius: 4px;
+  font-size: 7.5px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terminal-current-meta b {
+  margin-left: 3px;
+  color: #d2e2d5;
+  font-weight: 700;
+}
+
+.terminal-current-target {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+}
+
+.terminal-current-target > span {
+  color: #78a183;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  white-space: nowrap;
+}
+
+.terminal-current-target > strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #9ef5b0;
+  font-size: clamp(7.5px, .63vw, 9px);
+  font-weight: 500;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terminal-wait-row {
+  min-width: 0;
+  padding: 5px 7px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  color: #e7c78b;
+  background: rgba(74, 53, 15, .25);
+  border: 1px solid rgba(245, 179, 66, .2);
+  border-radius: 5px;
+  font-size: 8px;
+}
+
+.terminal-wait-row > span { font-size: 7px; font-weight: 800; letter-spacing: .06em; }
+.terminal-wait-row > strong { overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.terminal-wait-row > time { color: #ffd786; font-variant-numeric: tabular-nums; font-weight: 800; }
+
+.terminal-cycle-stats {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  color: #789183;
+  font-size: 8px;
+}
+
+.terminal-cycle-stats .is-success { color: #78dd8d; }
+.terminal-cycle-stats .is-skipped { color: #e7c78b; }
+.terminal-cycle-stats .is-error { color: #f18b91; }
+.terminal-cycle-stats b { color: inherit; font-variant-numeric: tabular-nums; }
+
+.terminal-history-title {
+  width: 59%;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #668473;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: .1em;
+}
+
+.terminal-history-title i {
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, rgba(56, 242, 106, .19), transparent);
+}
+
 .terminal-log {
   width: 59%;
   min-height: 0;
   display: grid;
   align-content: start;
-  gap: 7px;
+  gap: 4px;
   overflow: hidden;
 }
 
@@ -315,7 +491,7 @@
   gap: 6px;
   color: #c7d9cb;
   font-size: clamp(9px, .79vw, 12px);
-  line-height: 1.45;
+  line-height: 1.32;
   animation: terminal-line-in .18s ease both;
 }
 
@@ -384,6 +560,25 @@
   color: var(--dashboard-neon);
   font-weight: 600;
   text-align: right;
+}
+
+.source-action-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.source-action-grid .btn {
+  width: 100%;
+  min-width: 0;
+  padding-inline: 12px;
+  white-space: nowrap;
+}
+
+.source-stop-button {
+  width: 100%;
+  margin-top: 10px;
 }
 
 .cat-typing-scene {
@@ -832,11 +1027,12 @@
   }
 
   .terminal-panel {
-    inset: 18px;
-    bottom: auto;
-    height: 48%;
+    inset: 72px 18px auto;
+    height: 54%;
   }
 
+  .terminal-current,
+  .terminal-history-title,
   .terminal-log,
   .terminal-progress {
     width: 100%;
@@ -847,8 +1043,11 @@
   }
 
   .terminal-log {
-    gap: 5px;
+    gap: 3px;
   }
+
+  .terminal-current { gap: 5px; padding: 8px; }
+  .terminal-cycle-stats { display: none; }
 
   .terminal-line {
     font-size: 10px;
@@ -856,7 +1055,7 @@
 
   .cat-typing-scene {
     width: 100%;
-    height: 56%;
+    height: 44%;
     right: 0;
     bottom: -5%;
   }
@@ -867,6 +1066,10 @@
 
   .system-side-panel,
   .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .source-action-grid {
     grid-template-columns: 1fr;
   }
 
@@ -940,13 +1143,19 @@
   }
 
   .terminal-panel {
-    inset: 14px;
-    height: 52%;
+    inset: 68px 14px auto;
+    height: 55%;
   }
 
   .terminal-command {
     font-size: 9px;
+    margin-bottom: 8px;
   }
+
+  .terminal-current { margin-bottom: 6px; }
+  .terminal-current-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .terminal-history-title { margin-bottom: 4px; }
+  .terminal-current-target > strong { font-size: 7.5px; }
 
   .terminal-line {
     font-size: 8.7px;
@@ -957,7 +1166,7 @@
   }
 
   .cat-typing-scene {
-    height: 49%;
+    height: 41%;
     bottom: -6%;
   }
 

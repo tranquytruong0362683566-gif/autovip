@@ -5,22 +5,48 @@
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 
   const VIETNAM_TIME_ZONE = 'Asia/Ho_Chi_Minh';
-  const MAX_TERMINAL_LINES = 11;
+  const MAX_TERMINAL_LINES = 7;
 
   const dashboardState = {
     initialized: false,
     clockTimer: null,
+    processTimer: null,
     statusObserver: null,
     outputObserver: null,
+    processEventHandler: null,
     lastStatusKey: '',
     lastOutputKey: '',
+    lastHistoryKey: '',
+    lastProcessSequence: 0,
+    lastStructuredProcessAt: 0,
+    processStartedAt: Date.now(),
+    processActionKey: 'ready',
     progress: 0,
     currentIndex: 0,
     totalLinks: 0,
     activeStage: 'scan',
     activeSettings: null,
     activeWorkspace: null,
-    activeWorkspaceTrigger: null
+    activeWorkspaceTrigger: null,
+    processStats: {
+      success: 0,
+      skipped: 0,
+      errors: 0
+    },
+    processView: {
+      title: 'Hệ thống sẵn sàng nhận lệnh',
+      detail: 'Chưa có tác vụ đang chạy.',
+      status: 'ready',
+      cycle: 0,
+      index: 0,
+      total: 0,
+      remaining: 0,
+      source: '--',
+      target: '',
+      targetLabel: 'LINK HIỆN TẠI',
+      countdown: null,
+      countdownLabel: 'Đang chờ'
+    }
   };
 
   function normalizeText(value) {
@@ -343,7 +369,159 @@
     return `${parts.hour}:${parts.minute}:${parts.second}`;
   }
 
-  function trimTerminalMessage(message, maxLength = 72) {
+  function formatDuration(totalSeconds) {
+    const safe = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+    const hours = Math.floor(safe / 3600);
+    const minutes = Math.floor((safe % 3600) / 60);
+    const seconds = safe % 60;
+    const two = value => String(value).padStart(2, '0');
+    return hours > 0
+      ? `${two(hours)}:${two(minutes)}:${two(seconds)}`
+      : `${two(minutes)}:${two(seconds)}`;
+  }
+
+  function updateProcessElapsed() {
+    const elapsed = $('#systemElapsedTime');
+    if (!elapsed) return;
+    const seconds = Math.max(0, Math.floor((Date.now() - dashboardState.processStartedAt) / 1000));
+    elapsed.textContent = formatDuration(seconds);
+    elapsed.dateTime = `PT${seconds}S`;
+  }
+
+  function statusDisplay(status) {
+    const values = {
+      ready: ['READY', 'is-ready'],
+      running: ['RUNNING', 'is-running'],
+      ok: ['OK', 'is-ok'],
+      wait: ['WAIT', 'is-wait'],
+      error: ['ERROR', 'is-error'],
+      next: ['NEXT', 'is-next'],
+      stop: ['STOP', 'is-stop']
+    };
+    return values[status] || values.running;
+  }
+
+  function phaseProgress(stage, status) {
+    if (status === 'ok' && stage === 'comment') return 1;
+    if (status === 'next' || status === 'error') return 1;
+    if (stage === 'ai') return .55;
+    if (stage === 'comment') return .82;
+    return .18;
+  }
+
+  function renderProcessStats() {
+    const stats = dashboardState.processStats;
+    if ($('#systemSuccessCount')) $('#systemSuccessCount').textContent = String(stats.success);
+    if ($('#systemSkippedCount')) $('#systemSkippedCount').textContent = String(stats.skipped);
+    if ($('#systemErrorCount')) $('#systemErrorCount').textContent = String(stats.errors);
+  }
+
+  function renderCurrentProcess(detail = {}, { fromEvent = false } = {}) {
+    if (fromEvent) dashboardState.lastStructuredProcessAt = Date.now();
+    const nextActionKey = normalizeText(detail.actionKey || dashboardState.processActionKey || 'process');
+    if (nextActionKey && nextActionKey !== dashboardState.processActionKey) {
+      dashboardState.processActionKey = nextActionKey;
+      dashboardState.processStartedAt = Date.now();
+    }
+
+    if (detail.resetStats === true) {
+      dashboardState.processStats = { success: 0, skipped: 0, errors: 0 };
+    }
+
+    const isNewEvent = !detail.sequence || detail.sequence !== dashboardState.lastProcessSequence;
+    if (fromEvent && detail.sequence) dashboardState.lastProcessSequence = detail.sequence;
+    if (fromEvent && isNewEvent && detail.statDelta && typeof detail.statDelta === 'object') {
+      dashboardState.processStats.success += Math.max(0, Number(detail.statDelta.success) || 0);
+      dashboardState.processStats.skipped += Math.max(0, Number(detail.statDelta.skipped) || 0);
+      dashboardState.processStats.errors += Math.max(0, Number(detail.statDelta.errors) || 0);
+    }
+
+    const previous = dashboardState.processView;
+    const next = { ...previous };
+    const fields = ['title', 'detail', 'status', 'stage', 'cycle', 'index', 'total', 'remaining', 'source', 'target', 'targetLabel', 'countdown', 'countdownLabel'];
+    fields.forEach(field => {
+      if (Object.prototype.hasOwnProperty.call(detail, field)) next[field] = detail[field];
+    });
+    dashboardState.processView = next;
+
+    const title = normalizeText(next.title) || 'Hệ thống đang hoạt động';
+    const detailText = normalizeText(next.detail) || 'Đang chờ thông tin chi tiết từ tiến trình.';
+    const status = normalizeText(next.status).toLowerCase() || 'running';
+    const [badgeText, badgeClass] = statusDisplay(status);
+    const badge = $('#systemProcessBadge');
+    if (badge) {
+      badge.textContent = badgeText;
+      badge.className = `terminal-state-badge ${badgeClass}`;
+    }
+    if ($('#systemProcessTitle')) {
+      $('#systemProcessTitle').textContent = title;
+      $('#systemProcessTitle').title = title;
+    }
+    if ($('#systemProcessDetail')) {
+      $('#systemProcessDetail').textContent = detailText;
+      $('#systemProcessDetail').title = detailText;
+    }
+
+    const cycle = Math.max(0, Number(next.cycle) || 0);
+    const index = Math.max(0, Number(next.index) || 0);
+    const total = Math.max(0, Number(next.total) || 0);
+    const remaining = Object.prototype.hasOwnProperty.call(next, 'remaining')
+      ? Math.max(0, Number(next.remaining) || 0)
+      : Math.max(0, total - index);
+    if ($('#systemCycleValue')) $('#systemCycleValue').textContent = cycle ? String(cycle) : '--';
+    if ($('#systemQueueValue')) $('#systemQueueValue').textContent = total ? `${index}/${total}` : '0/0';
+    if ($('#systemRemainingValue')) $('#systemRemainingValue').textContent = String(remaining);
+    if ($('#systemSourceValue')) {
+      $('#systemSourceValue').textContent = normalizeText(next.source) || '--';
+      $('#systemSourceValue').title = normalizeText(next.source) || '';
+    }
+
+    const target = normalizeText(next.target);
+    if ($('#systemCurrentTargetLabel')) $('#systemCurrentTargetLabel').textContent = normalizeText(next.targetLabel) || 'LINK HIỆN TẠI';
+    if ($('#systemCurrentLink')) {
+      $('#systemCurrentLink').textContent = target || 'Chưa có link đang xử lý';
+      $('#systemCurrentLink').title = target;
+    }
+
+    const countdownRow = $('#systemCountdownRow');
+    const hasCountdown = next.countdown !== null && next.countdown !== undefined && Number.isFinite(Number(next.countdown));
+    countdownRow?.classList.toggle('hidden', !hasCountdown);
+    if (hasCountdown) {
+      const seconds = Math.max(0, Math.ceil(Number(next.countdown) || 0));
+      if ($('#systemCountdownLabel')) $('#systemCountdownLabel').textContent = normalizeText(next.countdownLabel) || 'Đang chờ';
+      if ($('#systemCountdownValue')) {
+        $('#systemCountdownValue').textContent = formatDuration(seconds);
+        $('#systemCountdownValue').dateTime = `PT${seconds}S`;
+      }
+    }
+
+    dashboardState.currentIndex = index;
+    dashboardState.totalLinks = total;
+    const explicitProgress = Number(detail.progress);
+    const progress = Number.isFinite(explicitProgress)
+      ? explicitProgress
+      : total > 0
+        ? (((Math.max(1, index) - 1) + phaseProgress(next.stage || detail.stage, status)) / total) * 100
+        : status === 'ok'
+          ? 100
+          : dashboardState.progress;
+    if (total > 0 || Number.isFinite(explicitProgress) || status === 'ok') setProgress(progress, true);
+    if (detail.stage) setProcessStage(detail.stage);
+    renderProcessStats();
+    updateProcessElapsed();
+
+    if (fromEvent && isNewEvent && normalizeText(detail.historyMessage)) {
+      const historyKey = `${detail.sequence || detail.timestamp || ''}:${normalizeText(detail.historyMessage)}`;
+      appendTerminalLine(
+        detail.historyMessage,
+        detail.historyTag || badgeText,
+        detail.historyLevel || (status === 'error' ? 'error' : status === 'ok' ? 'ok' : status === 'wait' || status === 'next' ? 'warn' : 'running'),
+        historyKey
+      );
+    }
+  }
+
+  function trimTerminalMessage(message, maxLength = 105) {
     const clean = normalizeText(message);
     if (clean.length <= maxLength) return clean;
     return `${clean.slice(0, maxLength - 1).trimEnd()}…`;
@@ -425,7 +603,8 @@
       level: statusClass === 'error' ? 'error' : statusClass === 'ok' ? 'ok' : statusClass === 'warn' ? 'warn' : 'running',
       stage: dashboardState.activeStage,
       progress: dashboardState.progress,
-      resetProgress: false
+      resetProgress: false,
+      transient: false
     };
 
     if (/sẵn sàng/.test(lower)) {
@@ -452,6 +631,8 @@
       result = { ...result, text: 'Lọc trùng và nạp hàng đợi liên kết', tag: statusClass === 'error' ? 'ERROR' : 'OK', level: statusClass === 'error' ? 'error' : 'ok', stage: 'scan', progress: 34 };
     } else if (/đang xử lý link/.test(lower)) {
       result = { ...result, text: `Xử lý link ${dashboardState.currentIndex || '?'}/${dashboardState.totalLinks || '?'}`, tag: 'RUNNING', level: 'running', stage: 'scan', progress: progressForCurrentLink(.08) };
+    } else if (/rakko đang đọc description/.test(lower)) {
+      result = { ...result, text: clean, tag: 'RUNNING', level: 'running', stage: 'scan', progress: progressForCurrentLink(.28), transient: true };
     } else if (/rakko/.test(lower) && /đang gọi|làm dự phòng|đọc|lấy description/.test(lower)) {
       result = { ...result, text: 'Rakko đọc nội dung bài viết', tag: statusClass === 'ok' ? 'OK' : 'RUNNING', level: statusClass === 'ok' ? 'ok' : 'running', stage: 'scan', progress: progressForCurrentLink(.28) };
     } else if (/nội dung.*apify|đã lấy nội dung|điền vào ô nội dung/.test(lower)) {
@@ -464,10 +645,10 @@
       result = { ...result, text: 'Gửi bình luận Facebook thành công', tag: 'OK', level: 'ok', stage: 'comment', progress: progressForCurrentLink(1) };
     } else if (/đã chạy xong link|đang nghỉ.*link tiếp theo/.test(lower)) {
       const seconds = clean.match(/(\d+)\s*giây/i)?.[1];
-      result = { ...result, text: `Hoàn tất link — nghỉ${seconds ? ` ${seconds} giây` : ''}`, tag: 'WAIT', level: 'warn', stage: 'comment', progress: progressForCurrentLink(1) };
+      result = { ...result, text: `Hoàn tất link — nghỉ${seconds ? ` ${seconds} giây` : ''}`, tag: 'WAIT', level: 'warn', stage: 'comment', progress: progressForCurrentLink(1), transient: true };
     } else if (/đang nghỉ|nghỉ 0 giây/.test(lower)) {
       const seconds = clean.match(/(\d+)\s*giây/i)?.[1];
-      result = { ...result, text: `Chờ${seconds ? ` ${seconds} giây` : ''} trước vòng tiếp theo`, tag: 'WAIT', level: 'warn', stage: 'scan', progress: 100 };
+      result = { ...result, text: `Chờ${seconds ? ` ${seconds} giây` : ''} trước vòng tiếp theo`, tag: 'WAIT', level: 'warn', stage: 'scan', progress: 100, transient: true };
     } else if (/đã xử lý hết link/.test(lower)) {
       result = { ...result, text: 'Hoàn tất toàn bộ hàng đợi', tag: 'OK', level: 'ok', stage: 'comment', progress: 100 };
     } else if (/dừng|lỗi|thất bại|không thể/.test(lower) || statusClass === 'error') {
@@ -484,7 +665,17 @@
     if (!clean) return;
     const key = `${status.className}:${clean}`;
     const result = classifyBridgeStatus(clean, status);
-    appendTerminalLine(result.text, result.tag, result.level, key);
+    if (Date.now() - dashboardState.lastStructuredProcessAt > 1200) {
+      renderCurrentProcess({
+        actionKey: `bridge-${result.stage}-${result.tag}-${result.text.replace(/\d+\s*giây/ig, 'countdown')}`,
+        title: result.text,
+        detail: clean,
+        status: result.level === 'error' ? 'error' : result.tag === 'OK' ? 'ok' : result.tag === 'NEXT' ? 'next' : result.tag === 'STOP' ? 'stop' : result.level === 'warn' ? 'wait' : 'running',
+        stage: result.stage,
+        progress: result.progress
+      });
+    }
+    if (!result.transient) appendTerminalLine(result.text, result.tag, result.level, key);
     setProcessStage(result.stage);
     setProgress(result.progress, result.resetProgress);
   }
@@ -501,23 +692,59 @@
     if (output.classList.contains('loading')) {
       const isClassifying = /phân loại/i.test(clean);
       appendTerminalLine(isClassifying ? 'AI phân loại nội dung bài viết' : 'AI tạo bình luận tự nhiên', 'RUNNING', 'running', `ai:${key}`);
+      renderCurrentProcess({
+        actionKey: isClassifying ? 'ai-classifying' : 'ai-generating-comment',
+        title: isClassifying ? 'AI đang phân loại bài viết' : 'AI đang tạo bình luận',
+        detail: clean,
+        status: 'running',
+        stage: 'ai',
+        source: 'ChatGPT API',
+        countdown: null
+      });
       setProcessStage('ai');
       setProgress(progressForCurrentLink(isClassifying ? .5 : .64));
       return;
     }
     if (output.classList.contains('error')) {
       appendTerminalLine('API ChatGPT trả về lỗi', 'ERROR', 'error', `ai:${key}`);
+      renderCurrentProcess({
+        actionKey: 'ai-output-error',
+        title: 'API ChatGPT trả về lỗi',
+        detail: clean,
+        status: 'error',
+        stage: 'ai',
+        source: 'ChatGPT API',
+        countdown: null
+      });
       setProcessStage('ai');
       return;
     }
     if (/^\(?next\)?$/i.test(clean)) {
       appendTerminalLine('AI trả về NEXT — bỏ qua bài viết', 'NEXT', 'warn', `ai:${key}`);
+      renderCurrentProcess({
+        actionKey: 'ai-output-next',
+        title: 'AI trả về NEXT',
+        detail: 'Bài viết không phù hợp và sẽ được chuyển sang danh sách loại bỏ.',
+        status: 'next',
+        stage: 'ai',
+        source: 'ChatGPT API',
+        countdown: null
+      });
       setProcessStage('ai');
       setProgress(progressForCurrentLink(1));
       return;
     }
 
     appendTerminalLine('AI đã tạo xong nội dung bình luận', 'OK', 'ok', `ai:${key}`);
+    renderCurrentProcess({
+      actionKey: 'ai-output-ready',
+      title: 'AI đã tạo xong bình luận',
+      detail: 'Nội dung bình luận đã sẵn sàng để gửi lên Facebook.',
+      status: 'ok',
+      stage: 'comment',
+      source: 'ChatGPT API',
+      countdown: null
+    });
     setProcessStage('comment');
     setProgress(progressForCurrentLink(.72));
   }
@@ -549,8 +776,17 @@
       });
     }
 
+    dashboardState.processEventHandler = event => {
+      if (!event?.detail || typeof event.detail !== 'object') return;
+      renderCurrentProcess(event.detail, { fromEvent: true });
+    };
+    window.addEventListener('autovip:process', dashboardState.processEventHandler);
+    const currentProcess = window.fbBridgeShared?.getProcessStatus?.();
+    if (currentProcess) renderCurrentProcess(currentProcess, { fromEvent: true });
+
     const commandButtons = [
-      ['#scanGroupLinksBtn', 'Nhận lệnh chạy tự động bằng API'],
+      ['#dashboardAutoRunBtn', 'Nhận lệnh Chạy Tự Động'],
+      ['#scanGroupLinksBtn', 'Nhận lệnh Lấy Link API'],
       ['#apifyScanBtn', 'Nhận lệnh quét thủ công và đọc Rakko'],
       ['#autoWorkflowBtn', 'Nhận lệnh chạy hàng đợi hiện có']
     ];
@@ -575,10 +811,18 @@
       window.clearInterval(dashboardState.clockTimer);
       dashboardState.clockTimer = null;
     }
+    if (dashboardState.processTimer) {
+      window.clearInterval(dashboardState.processTimer);
+      dashboardState.processTimer = null;
+    }
     dashboardState.statusObserver?.disconnect();
     dashboardState.outputObserver?.disconnect();
     dashboardState.statusObserver = null;
     dashboardState.outputObserver = null;
+    if (dashboardState.processEventHandler) {
+      window.removeEventListener('autovip:process', dashboardState.processEventHandler);
+      dashboardState.processEventHandler = null;
+    }
   }
 
   function initDashboard() {
@@ -588,6 +832,8 @@
 
     updateVietnamClock();
     dashboardState.clockTimer = window.setInterval(updateVietnamClock, 1000);
+    updateProcessElapsed();
+    dashboardState.processTimer = window.setInterval(updateProcessElapsed, 1000);
     wireSettingsModals();
     wireWorkspaceModal();
     wireTerminalObservers();

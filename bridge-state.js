@@ -63,7 +63,9 @@
     closedLoopRunning: false,
     activeReadTabId: null,
     activeReadLink: '',
-    bridgeBusy: false
+    bridgeBusy: false,
+    processStatus: null,
+    processSerial: 0
   };
 
   try { localStorage.removeItem('truong_fb_bridge_extension_id_v1'); } catch {}
@@ -127,8 +129,32 @@
 
   function setBridgeStatus(message, type = '') {
     if (!B.bridgeStatus) return;
+    const isHiddenSource = B.bridgeStatus.classList.contains('automation-status-source');
     B.bridgeStatus.textContent = message;
-    B.bridgeStatus.className = 'automation-status' + (type ? ' ' + type : '');
+    B.bridgeStatus.className = (isHiddenSource ? 'automation-status-source hidden' : 'automation-status') + (type ? ' ' + type : '');
+  }
+
+  function reportProcess(detail = {}) {
+    const payload = detail && typeof detail === 'object' ? detail : {};
+    bridgeState.processSerial += 1;
+    const next = {
+      ...(bridgeState.processStatus || {}),
+      ...payload,
+      historyMessage: payload.historyMessage || '',
+      historyTag: payload.historyTag || '',
+      historyLevel: payload.historyLevel || '',
+      statDelta: payload.statDelta && typeof payload.statDelta === 'object' ? payload.statDelta : null,
+      resetStats: payload.resetStats === true,
+      sequence: bridgeState.processSerial,
+      timestamp: Date.now()
+    };
+    bridgeState.processStatus = next;
+    window.dispatchEvent(new CustomEvent('autovip:process', { detail: next }));
+    return next;
+  }
+
+  function getProcessStatus() {
+    return bridgeState.processStatus ? { ...bridgeState.processStatus } : null;
   }
 
   function addInputSave(el, key) {
@@ -447,6 +473,8 @@
     getLoopPauseSeconds,
     getLinkPauseSeconds,
     setBridgeStatus,
+    reportProcess,
+    getProcessStatus,
     addInputSave,
     parseLines,
     normalizeUrl,

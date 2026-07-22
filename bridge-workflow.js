@@ -33,6 +33,20 @@
     'FACEBOOK_FEATURE_RESTRICTED'
   ]);
 
+  function reportProcess(detail = {}) {
+    if (typeof S.reportProcess === 'function') S.reportProcess(detail);
+  }
+
+  function queueProcessMeta(index = 0, total = 0) {
+    const current = Math.max(0, Number(index) || 0);
+    const size = Math.max(0, Number(total) || 0);
+    return {
+      index: current,
+      total: size,
+      remaining: size ? Math.max(0, size - current) : 0
+    };
+  }
+
   function classifyApifyError(error) {
     if (typeof APIFY?.classifyError === 'function') return APIFY.classifyError(error);
     return {
@@ -204,11 +218,11 @@
       try {
         const deadline = Date.now() + 120000;
         while (Date.now() < deadline) {
-          if (!S.isBridgeBusy() && !S.isClosedLoopRunning() && !B.scanGroupLinksBtn?.disabled) break;
+          if (!S.isBridgeBusy() && !S.isClosedLoopRunning() && !B.dashboardAutoRunBtn?.disabled) break;
           await S.delay(500);
         }
 
-        if (S.isBridgeBusy() || S.isClosedLoopRunning() || B.scanGroupLinksBtn?.disabled) {
+        if (S.isBridgeBusy() || S.isClosedLoopRunning() || B.dashboardAutoRunBtn?.disabled) {
           throw new Error('Không thể tự chạy lại vì tác vụ cũ chưa kết thúc.');
         }
 
@@ -217,8 +231,20 @@
           throw new Error('UID mới không còn đăng nhập trước lúc chạy lại.');
         }
 
-        S.setBridgeStatus(`Đã có UID ${uid || account.uid}. Đang tự động bấm 🚀 Chạy tự động bằng API...`, 'ok');
-        B.scanGroupLinksBtn?.click();
+        S.setBridgeStatus(`Đã có UID ${uid || account.uid}. Đang tiếp tục Chạy Tự Động...`, 'ok');
+        reportProcess({
+          actionKey: 'automatic-restart',
+          title: 'Tiếp tục chạy tự động bằng UID mới',
+          detail: `UID ${uid || account.uid} đã sẵn sàng.`,
+          status: 'running',
+          stage: 'scan',
+          source: 'Facebook Cookie',
+          countdown: null,
+          historyMessage: `UID ${uid || account.uid} sẵn sàng, tiếp tục chạy tự động`,
+          historyTag: 'OK',
+          historyLevel: 'ok'
+        });
+        B.dashboardAutoRunBtn?.click();
       } catch (error) {
         S.setBridgeStatus(`Không thể tự chạy lại bằng API: ${error.message || error}`, 'error');
       } finally {
@@ -389,6 +415,22 @@
 
   async function ensureFacebookAccountBeforeCycle(cycleIndex = 1) {
     S.setBridgeStatus(`Vòng ${cycleIndex}: đang kiểm tra UID Facebook trước khi quét nhóm...`, 'warn');
+    reportProcess({
+      actionKey: `cycle-${cycleIndex}-account-check`,
+      title: 'Kiểm tra tài khoản Facebook',
+      detail: `Đang xác thực UID trước khi bắt đầu vòng ${cycleIndex}.`,
+      status: 'running',
+      stage: 'scan',
+      cycle: cycleIndex,
+      source: 'Extension',
+      target: '',
+      targetLabel: 'TÀI KHOẢN FACEBOOK',
+      countdown: null,
+      resetStats: true,
+      historyMessage: `Vòng ${cycleIndex}: kiểm tra UID Facebook`,
+      historyTag: 'RUNNING',
+      historyLevel: 'running'
+    });
 
     const account = await refreshFacebookAccount({ silent: true });
     if (!account) {
@@ -399,6 +441,20 @@
 
     if (account?.loggedIn && account?.uid) {
       S.setBridgeStatus(`Vòng ${cycleIndex}: đã phát hiện UID ${account.uid}. Bắt đầu quét nhóm...`, 'ok');
+      reportProcess({
+        actionKey: `cycle-${cycleIndex}-account-ready`,
+        title: 'Xác thực UID Facebook thành công',
+        detail: `UID ${account.uid} đã đăng nhập và sẵn sàng quét nhóm.`,
+        status: 'ok',
+        stage: 'scan',
+        cycle: cycleIndex,
+        source: 'Extension',
+        target: account.uid,
+        targetLabel: 'UID ĐANG SỬ DỤNG',
+        historyMessage: `Xác thực UID ${account.uid} thành công`,
+        historyTag: 'OK',
+        historyLevel: 'ok'
+      });
       return account;
     }
 
@@ -432,6 +488,20 @@
       const remainMs = Math.max(0, endAt - Date.now());
       const remainSeconds = Math.ceil(remainMs / 1000);
       S.setBridgeStatus(`Đã chạy xong link ${linkIndex}/${totalLinks}. Đang nghỉ ${remainSeconds} giây rồi chạy link tiếp theo...`, 'warn');
+      reportProcess({
+        actionKey: `wait-link-${linkIndex}-${totalLinks}`,
+        title: 'Nghỉ trước khi xử lý link tiếp theo',
+        detail: `Đã hoàn tất link ${linkIndex}/${totalLinks}. Bộ đếm chỉ cập nhật tại dòng hiện tại.`,
+        status: 'wait',
+        stage: 'comment',
+        ...queueProcessMeta(linkIndex, totalLinks),
+        source: 'Hàng đợi',
+        countdown: remainSeconds,
+        countdownLabel: 'Chuyển sang link tiếp theo sau',
+        historyMessage: remainSeconds === seconds ? `Hoàn tất link ${linkIndex}/${totalLinks}, bắt đầu thời gian nghỉ` : '',
+        historyTag: 'WAIT',
+        historyLevel: 'warn'
+      });
       await S.delay(Math.min(1000, Math.max(200, remainMs)));
     }
   }
@@ -504,6 +574,18 @@
             `Đã quét link trên tab Facebook. Rakko đang đọc description ${completed}/${queue.length}...`,
             'warn'
           );
+          reportProcess({
+            actionKey: 'manual-rakko-preload',
+            title: 'Rakko đang đọc nội dung bài viết',
+            detail: `Đã đọc ${completed}/${queue.length} description từ danh sách quét thủ công.`,
+            status: 'running',
+            stage: 'scan',
+            ...queueProcessMeta(completed, queue.length),
+            source: 'Rakko API',
+            target: link,
+            targetLabel: 'LINK ĐANG ĐỌC',
+            countdown: null
+          });
         }
       }
     };
@@ -531,6 +613,23 @@
       `Đang mở tab Facebook mới để quét thủ công ${modeLabel}, tối đa ${groupLimit} link mỗi nhóm...`,
       'warn'
     );
+    reportProcess({
+      actionKey: 'manual-facebook-scan',
+      title: 'Quét nhóm Facebook thủ công',
+      detail: `${groups.length} nhóm · nguồn ${modeLabel} · tối đa ${groupLimit} link mỗi nhóm.`,
+      status: 'running',
+      stage: 'scan',
+      index: 0,
+      total: groups.length,
+      remaining: groups.length,
+      source: 'Facebook + Rakko',
+      target: groups[0] || '',
+      targetLabel: 'NHÓM ĐANG QUÉT',
+      countdown: null,
+      historyMessage: `Bắt đầu quét thủ công ${groups.length} nhóm Facebook`,
+      historyTag: 'RUNNING',
+      historyLevel: 'running'
+    });
 
     const response = await API.sendBridge(
       ['SCAN_GROUP_PERMALINKS', 'SCAN_GROUP_LINKS', 'scanGroupLinks', 'SCAN_GROUP', 'scan_links', 'SCAN_LINKS'],
@@ -571,8 +670,40 @@
         `Quét thủ công đã mở tab Facebook mới và lấy ${links.length} link ${modeLabel} không trùng.${historyText} Rakko đã đọc được ${rakko.saved}/${links.length} description${rakko.failed ? `; ${rakko.failed} link sẽ tự gọi lại Rakko khi xử lý` : ''}. Hàng đợi hiện có ${queuedLinks.length} link.`,
         'ok'
       );
+      reportProcess({
+        actionKey: 'manual-facebook-scan-complete',
+        title: 'Quét thủ công hoàn tất',
+        detail: `Nạp ${links.length} link mới; Rakko đọc được ${rakko.saved}/${links.length} description.`,
+        status: 'ok',
+        stage: 'scan',
+        index: links.length,
+        total: links.length,
+        remaining: 0,
+        source: 'Facebook + Rakko',
+        target: '',
+        targetLabel: 'KẾT QUẢ QUÉT',
+        historyMessage: `Quét thủ công hoàn tất, nạp ${links.length} link mới`,
+        historyTag: 'OK',
+        historyLevel: 'ok'
+      });
     } else {
       S.setBridgeStatus(`Đã mở và quét xong tab Facebook nhưng không có link ${modeLabel} mới sau khi đối chiếu hai danh sách lịch sử.${historyText}`, 'warn');
+      reportProcess({
+        actionKey: 'manual-facebook-scan-empty',
+        title: 'Quét thủ công không có link mới',
+        detail: `Không còn link ${modeLabel} sau khi đối chiếu lịch sử.`,
+        status: 'wait',
+        stage: 'scan',
+        index: 0,
+        total: 0,
+        remaining: 0,
+        source: 'Facebook + Rakko',
+        target: '',
+        targetLabel: 'KẾT QUẢ QUÉT',
+        historyMessage: 'Quét thủ công hoàn tất nhưng không có link mới',
+        historyTag: 'IDLE',
+        historyLevel: 'warn'
+      });
     }
 
     return links;
@@ -624,6 +755,56 @@
           `${retryText} Đang gọi ${actorLabel} (${attempt}/${total}) theo ${normalizedGroups.length} lượt độc lập, yêu cầu ${groupLimit} bài mỗi nhóm (${requestedTotal} bài).`,
           'warn'
         );
+        reportProcess({
+          actionKey: `apify-actor-${attempt}`,
+          title: `Kết nối ${actorLabel}`,
+          detail: `${normalizedGroups.length} nhóm · yêu cầu ${groupLimit} bài/nhóm · Actor ${attempt}/${total}.`,
+          status: 'running',
+          stage: 'scan',
+          index: 0,
+          total: normalizedGroups.length,
+          remaining: normalizedGroups.length,
+          source: actorLabel,
+          target: normalizedGroups[0] || '',
+          targetLabel: 'NHÓM CHỜ QUÉT',
+          countdown: null,
+          historyMessage: `Gọi ${actorLabel} để quét ${normalizedGroups.length} nhóm`,
+          historyTag: 'RUNNING',
+          historyLevel: 'running'
+        });
+      },
+      onGroupProgress: ({ phase, actorLabel, groupUrl, groupIndex, totalGroups, itemCount, linkCount, captionCount, message }) => {
+        const completed = phase === 'complete';
+        const failed = phase === 'error';
+        reportProcess({
+          actionKey: `apify-group-${groupIndex}-${phase}`,
+          title: failed
+            ? `Lỗi khi quét nhóm ${groupIndex}/${totalGroups}`
+            : completed
+              ? `Đã quét xong nhóm ${groupIndex}/${totalGroups}`
+              : `Apify đang quét nhóm ${groupIndex}/${totalGroups}`,
+          detail: failed
+            ? (message || 'Actor không trả được dữ liệu nhóm hiện tại.')
+            : completed
+              ? `Nhận ${itemCount || 0} bản ghi · ${linkCount || 0} link · ${captionCount || 0} caption.`
+              : `Đang chờ Actor phản hồi dữ liệu của nhóm hiện tại.`,
+          status: failed ? 'error' : completed ? 'ok' : 'running',
+          stage: 'scan',
+          index: completed ? groupIndex : Math.max(0, groupIndex - 1),
+          total: totalGroups,
+          remaining: Math.max(0, totalGroups - (completed ? groupIndex : groupIndex - 1)),
+          source: actorLabel,
+          target: groupUrl,
+          targetLabel: 'NHÓM ĐANG QUÉT',
+          countdown: null,
+          historyMessage: completed
+            ? `Nhóm ${groupIndex}/${totalGroups}: ${itemCount || 0} bản ghi, ${linkCount || 0} link`
+            : failed
+              ? `Nhóm ${groupIndex}/${totalGroups} gặp lỗi Apify`
+              : '',
+          historyTag: failed ? 'ERROR' : 'OK',
+          historyLevel: failed ? 'error' : 'ok'
+        });
       }
     });
     const groupResults = Array.isArray(result.groupResults) ? result.groupResults : [];
@@ -670,18 +851,86 @@
         `Apify đã quét riêng ${groupResults.length} nhóm theo nguồn ${modeLabel}, nhận ${result.itemCount} bản ghi, đọc ${postUrlFieldCount} giá trị post_url và giữ ${links.length} URL /permalink/ không trùng. Đã ghép ${savedCaptionCount}/${links.length} caption với đúng link.${postUrlDetailText}${historyText}${actorStatusText} Hàng đợi mới đã thay thế kết quả vòng trước và hiện có ${queuedLinks.length} link.`,
         'ok'
       );
+      reportProcess({
+        actionKey: 'apify-link-scan-complete',
+        title: 'Lấy Link API hoàn tất',
+        detail: `${result.itemCount} bản ghi · ${postUrlFieldCount} post_url · giữ ${links.length} link mới · ${savedCaptionCount} caption.`,
+        status: 'ok',
+        stage: 'scan',
+        index: 0,
+        total: links.length,
+        remaining: links.length,
+        source: workingActorLabel,
+        target: links[0] || '',
+        targetLabel: 'LINK ĐẦU HÀNG ĐỢI',
+        countdown: null,
+        historyMessage: `Lấy Link API hoàn tất, nạp ${links.length} link mới`,
+        historyTag: 'OK',
+        historyLevel: 'ok'
+      });
     } else if (result.noLinksReason === 'no_valid_post_urls') {
       S.setBridgeStatus(
         `Apify trả về ${result.itemCount} bản ghi nhưng cả hai Actor đều không có post_url hợp lệ. Vòng này được coi là không có link, hệ thống sẽ nghỉ rồi tự quét tiếp.${actorStatusText}`,
         'warn'
       );
+      reportProcess({
+        actionKey: 'apify-link-scan-invalid',
+        title: 'Apify không trả post_url hợp lệ',
+        detail: `Đã nhận ${result.itemCount} bản ghi nhưng không tạo được link hợp lệ.`,
+        status: 'wait',
+        stage: 'scan',
+        index: 0,
+        total: 0,
+        remaining: 0,
+        source: responseActorLabel,
+        target: '',
+        targetLabel: 'KẾT QUẢ API',
+        countdown: null,
+        historyMessage: 'Apify phản hồi nhưng không có post_url hợp lệ',
+        historyTag: 'IDLE',
+        historyLevel: 'warn'
+      });
     } else if (result.itemCount > 0) {
       S.setBridgeStatus(
         `Apify trả về ${result.itemCount} bản ghi nhưng không còn URL /permalink/ mới sau khi đối chiếu hai danh sách lịch sử.${historyText}${actorStatusText}`,
         'warn'
       );
+      reportProcess({
+        actionKey: 'apify-link-scan-duplicate',
+        title: 'Không có link mới sau khi lọc',
+        detail: `${result.itemCount} bản ghi đã được đối chiếu với lịch sử bình luận và loại bỏ.`,
+        status: 'wait',
+        stage: 'scan',
+        index: 0,
+        total: 0,
+        remaining: 0,
+        source: responseActorLabel,
+        target: '',
+        targetLabel: 'KẾT QUẢ API',
+        countdown: null,
+        historyMessage: 'Dữ liệu Apify không còn link mới sau khi lọc',
+        historyTag: 'IDLE',
+        historyLevel: 'warn'
+      });
     } else {
       S.setBridgeStatus(`Apify chạy thành công nhưng vòng này không có bài viết mới. Đây là trạng thái bình thường.${actorStatusText}`, 'warn');
+      reportProcess({
+        actionKey: 'apify-link-scan-empty',
+        title: 'Apify chưa có bài viết mới',
+        detail: 'Actor hoạt động bình thường; hàng đợi không có link mới.',
+        status: 'wait',
+        stage: 'scan',
+        index: 0,
+        total: 0,
+        remaining: 0,
+        source: responseActorLabel,
+        target: '',
+        targetLabel: 'KẾT QUẢ API',
+        countdown: null,
+        historyMessage: 'Apify hoạt động bình thường nhưng chưa có bài mới',
+        historyTag: 'IDLE',
+        historyLevel: 'warn'
+      });
     }
 
     return links;
@@ -738,6 +987,20 @@
     }
 
     S.setBridgeStatus('Đang gọi Rakko API lấy description bài viết...', 'warn');
+    reportProcess({
+      actionKey: 'rakko-read-current-link',
+      title: 'Rakko đang đọc nội dung bài viết',
+      detail: 'Caption Apify đang rỗng; gọi Rakko API làm nguồn dự phòng.',
+      status: 'running',
+      stage: 'scan',
+      source: 'Rakko API',
+      target: link,
+      targetLabel: 'LINK ĐANG ĐỌC',
+      countdown: null,
+      historyMessage: 'Caption rỗng, chuyển sang Rakko API',
+      historyTag: 'RUNNING',
+      historyLevel: 'running'
+    });
     const response = await API.sendBridge(
       ['READ_FB_POST_TITLE', 'SCAN_FACEBOOK_POST', 'READ_FB_POST', 'READ_FACEBOOK_POST', 'readFbPost', 'readFacebookPost', 'READ_POST'],
       {
@@ -764,6 +1027,20 @@
     setArticleInputContent(article);
 
     S.setBridgeStatus('Đã lấy description từ Rakko API và điền vào ô nội dung gốc.', 'ok');
+    reportProcess({
+      actionKey: 'rakko-read-current-link-complete',
+      title: 'Rakko đã trả nội dung bài viết',
+      detail: `${article.length} ký tự đã được nạp vào nội dung gốc.`,
+      status: 'ok',
+      stage: 'ai',
+      source: 'Rakko API',
+      target: link,
+      targetLabel: 'LINK ĐANG XỬ LÝ',
+      countdown: null,
+      historyMessage: `Rakko đã nạp ${article.length} ký tự nội dung`,
+      historyTag: 'OK',
+      historyLevel: 'ok'
+    });
     return article;
   }
 
@@ -773,6 +1050,20 @@
       await closeActiveReadTabIfAny();
       const article = setArticleInputContent(caption);
       S.setBridgeStatus('Đã lấy nội dung đã ghép sẵn từ Apify/Rakko và điền vào ô Nội dung bài viết gốc; không gọi API đọc lại.', 'ok');
+      reportProcess({
+        actionKey: 'load-apify-caption',
+        title: 'Đã nạp caption từ kết quả Apify',
+        detail: `${article.length} ký tự · không cần gọi lại API đọc bài.`,
+        status: 'ok',
+        stage: 'ai',
+        source: 'Caption Apify',
+        target: link,
+        targetLabel: 'LINK ĐANG XỬ LÝ',
+        countdown: null,
+        historyMessage: 'Nạp caption Apify cho AI',
+        historyTag: 'OK',
+        historyLevel: 'ok'
+      });
       return { article, source: 'cached_caption' };
     }
 
@@ -790,6 +1081,20 @@
     S.setBridgeStatus('Đang mở tab Facebook ẩn, chờ tải trang và gửi bình luận...', 'warn');
 
     const targetLink = link || S.getPostLinks()[0] || '';
+    reportProcess({
+      actionKey: 'facebook-comment-submit',
+      title: 'Đang gửi bình luận lên Facebook',
+      detail: 'Extension mở tab ẩn, tìm đúng ô bình luận, gửi nội dung và kiểm tra giới hạn trong 11 giây.',
+      status: 'running',
+      stage: 'comment',
+      source: 'Facebook Extension',
+      target: targetLink,
+      targetLabel: 'LINK ĐANG BÌNH LUẬN',
+      countdown: null,
+      historyMessage: 'Mở tab Facebook và bắt đầu gửi bình luận',
+      historyTag: 'RUNNING',
+      historyLevel: 'running'
+    });
     const activeTabId = S.getActiveReadTabId();
     const activeLink = S.getActiveReadLink();
     const tabId = activeTabId && S.normalizeUrl(activeLink) === S.normalizeUrl(targetLink) ? activeTabId : null;
@@ -817,6 +1122,21 @@
       S.clearActiveReadTab();
       S.saveRemovedLink(targetLink);
       S.setBridgeStatus('bài viết đã bị xóa', 'warn');
+      reportProcess({
+        actionKey: 'facebook-post-deleted',
+        title: 'Bài viết đã bị xóa',
+        detail: 'Link được chuyển sang danh sách loại bỏ và tiến trình chuyển bài tiếp theo.',
+        status: 'next',
+        stage: 'comment',
+        source: 'Facebook Extension',
+        target: targetLink,
+        targetLabel: 'LINK ĐÃ LOẠI BỎ',
+        countdown: null,
+        statDelta: { skipped: 1 },
+        historyMessage: 'Bài viết đã bị xóa, chuyển sang link tiếp theo',
+        historyTag: 'NEXT',
+        historyLevel: 'warn'
+      });
       return response;
     }
 
@@ -841,6 +1161,21 @@
 
       fatalStopMessage = `${restrictionMessage}${logoutSuffix}`;
       S.setBridgeStatus(fatalStopMessage, 'error');
+      reportProcess({
+        actionKey: 'facebook-comment-restricted',
+        title: 'Facebook giới hạn tính năng bình luận',
+        detail: fatalStopMessage,
+        status: 'error',
+        stage: 'comment',
+        source: 'Facebook Extension',
+        target: targetLink,
+        targetLabel: 'LINK GẶP LỖI',
+        countdown: null,
+        statDelta: { errors: 1 },
+        historyMessage: 'Facebook giới hạn tính năng, vòng tự động đã dừng',
+        historyTag: 'ERROR',
+        historyLevel: 'error'
+      });
       const stopError = new Error(fatalStopMessage);
       stopError.stopClosedLoop = true;
       stopError.code = 'FACEBOOK_FEATURE_RESTRICTED';
@@ -849,6 +1184,21 @@
 
     if (tabId && CLOSE_TAB_AFTER_COMMENT) S.clearActiveReadTab();
     S.setBridgeStatus('Đã gửi bình luận xong.', 'ok');
+    reportProcess({
+      actionKey: 'facebook-comment-success',
+      title: 'Bình luận Facebook thành công',
+      detail: 'Đã kiểm tra sau gửi, đóng tab và lưu link vào lịch sử thành công.',
+      status: 'ok',
+      stage: 'comment',
+      source: 'Facebook Extension',
+      target: targetLink,
+      targetLabel: 'LINK ĐÃ BÌNH LUẬN',
+      countdown: null,
+      statDelta: { success: 1 },
+      historyMessage: 'Bình luận Facebook thành công',
+      historyTag: 'OK',
+      historyLevel: 'ok'
+    });
     return response;
   }
 
@@ -891,15 +1241,61 @@
 
         try {
           S.setBridgeStatus(`Đang xử lý link ${index + 1}/${queue.length}...`, 'warn');
+          reportProcess({
+            actionKey: `queue-link-${index + 1}`,
+            title: `Bắt đầu xử lý link ${index + 1}/${queue.length}`,
+            detail: 'Đang nạp nội dung bài viết trước khi gửi sang AI phân loại.',
+            status: 'running',
+            stage: 'scan',
+            ...queueProcessMeta(index + 1, queue.length),
+            source: S.getPostCaption(link) ? 'Caption Apify' : 'Rakko dự phòng',
+            target: link,
+            targetLabel: 'LINK ĐANG XỬ LÝ',
+            countdown: null,
+            historyMessage: `Bắt đầu xử lý link ${index + 1}/${queue.length}`,
+            historyTag: 'RUNNING',
+            historyLevel: 'running'
+          });
           S.setPostLinks([link, ...S.getPostLinks().filter(item => S.normalizeUrl(item) !== S.normalizeUrl(link))]);
           await loadArticleForLink(link);
 
           const controller = window.chatGPTApiController || {};
           if (!controller.generateComment) throw new Error('Chưa nạp được hàm gọi API ChatGPT.');
+          reportProcess({
+            actionKey: `ai-link-${index + 1}`,
+            title: 'AI đang phân loại và tạo bình luận',
+            detail: `Phân tích nội dung của link ${index + 1}/${queue.length} theo mẫu đang chọn.`,
+            status: 'running',
+            stage: 'ai',
+            ...queueProcessMeta(index + 1, queue.length),
+            source: 'ChatGPT API',
+            target: link,
+            targetLabel: 'LINK ĐANG PHÂN TÍCH',
+            countdown: null,
+            historyMessage: `AI bắt đầu phân tích link ${index + 1}/${queue.length}`,
+            historyTag: 'RUNNING',
+            historyLevel: 'running'
+          });
           const comment = await controller.generateComment();
 
           if (isNextCommentResult(comment) || controller.isNextResult?.(comment)) {
             S.setBridgeStatus(`AI xác định link ${index + 1}/${queue.length} là bài người bán/cho thuê, đã bỏ qua và chuyển bài tiếp theo.`, 'warn');
+            reportProcess({
+              actionKey: `ai-next-${index + 1}`,
+              title: 'AI loại bài không phù hợp',
+              detail: `Link ${index + 1}/${queue.length} trả về (next) và được chuyển vào danh sách loại bỏ.`,
+              status: 'next',
+              stage: 'ai',
+              ...queueProcessMeta(index + 1, queue.length),
+              source: 'ChatGPT API',
+              target: link,
+              targetLabel: 'LINK ĐÃ BỎ QUA',
+              countdown: null,
+              statDelta: { skipped: 1 },
+              historyMessage: `AI trả về NEXT cho link ${index + 1}/${queue.length}`,
+              historyTag: 'NEXT',
+              historyLevel: 'warn'
+            });
             await closeActiveReadTabIfAny();
             S.saveRemovedLink(link);
             S.setPostLinks(S.getPostLinks().filter(item => S.normalizeUrl(item) !== S.normalizeUrl(link)));
@@ -925,6 +1321,22 @@
             break;
           }
           S.setBridgeStatus(`Lỗi ở link hiện tại, đã chuyển link kế tiếp:\n${error.message || error}`, 'error');
+          reportProcess({
+            actionKey: `queue-link-error-${index + 1}`,
+            title: `Lỗi khi xử lý link ${index + 1}/${queue.length}`,
+            detail: error.message || String(error),
+            status: 'error',
+            stage: 'comment',
+            ...queueProcessMeta(index + 1, queue.length),
+            source: 'Tiến trình tự động',
+            target: link,
+            targetLabel: 'LINK GẶP LỖI',
+            countdown: null,
+            statDelta: { errors: 1 },
+            historyMessage: `Link ${index + 1}/${queue.length} gặp lỗi, chuyển link tiếp theo`,
+            historyTag: 'ERROR',
+            historyLevel: 'error'
+          });
           S.setPostLinks(S.getPostLinks().filter(item => S.normalizeUrl(item) !== S.normalizeUrl(link)));
         }
 
@@ -939,6 +1351,23 @@
 
     if (!S.getPostLinks().length) {
       S.setBridgeStatus('Đã xử lý hết link trong ô Link bài viết Facebook.', 'ok');
+      reportProcess({
+        actionKey: 'queue-complete',
+        title: 'Hoàn tất toàn bộ hàng đợi',
+        detail: `Đã xử lý xong ${queue.length} link của lượt hiện tại.`,
+        status: 'ok',
+        stage: 'comment',
+        index: queue.length,
+        total: queue.length,
+        remaining: 0,
+        source: 'Hàng đợi',
+        target: '',
+        targetLabel: 'HÀNG ĐỢI',
+        countdown: null,
+        historyMessage: `Hoàn tất hàng đợi ${queue.length} link`,
+        historyTag: 'OK',
+        historyLevel: 'ok'
+      });
     }
   }
 
@@ -948,6 +1377,19 @@
     const prefix = S.text(reason) || `Vòng ${cycleIndex} đã xong.`;
     if (totalMs <= 0) {
       S.setBridgeStatus(`${prefix} Nghỉ 0 giây, quét tiếp ngay...`, 'warn');
+      reportProcess({
+        actionKey: `wait-cycle-${cycleIndex}`,
+        title: 'Chuyển sang vòng tiếp theo',
+        detail: prefix,
+        status: 'wait',
+        stage: 'scan',
+        cycle: cycleIndex,
+        source: 'Vòng tự động',
+        target: '',
+        targetLabel: 'TRẠNG THÁI VÒNG',
+        countdown: 0,
+        countdownLabel: 'Quét vòng tiếp theo sau'
+      });
       await S.delay(500);
       return;
     }
@@ -957,6 +1399,22 @@
       const remainMs = Math.max(0, endAt - Date.now());
       const remainSeconds = Math.ceil(remainMs / 1000);
       S.setBridgeStatus(`${prefix} Đang nghỉ ${remainSeconds} giây rồi tự quét vòng tiếp theo...`, 'warn');
+      reportProcess({
+        actionKey: `wait-cycle-${cycleIndex}`,
+        title: 'Nghỉ trước vòng quét tiếp theo',
+        detail: prefix,
+        status: 'wait',
+        stage: 'scan',
+        cycle: cycleIndex,
+        source: 'Vòng tự động',
+        target: '',
+        targetLabel: 'TRẠNG THÁI VÒNG',
+        countdown: remainSeconds,
+        countdownLabel: 'Quét vòng tiếp theo sau',
+        historyMessage: remainSeconds === seconds ? `Vòng ${cycleIndex} hoàn tất, bắt đầu thời gian nghỉ` : '',
+        historyTag: 'WAIT',
+        historyLevel: 'warn'
+      });
       await S.delay(Math.min(1000, remainMs));
     }
   }
@@ -973,6 +1431,25 @@
       while (S.isClosedLoopRunning()) {
         let waitReason = `Vòng ${cycleIndex} đã hoàn tất.`;
         try {
+          reportProcess({
+            actionKey: `cycle-${cycleIndex}-start`,
+            title: `Khởi chạy vòng tự động ${cycleIndex}`,
+            detail: 'Chuẩn bị kiểm tra UID và lấy dữ liệu bài viết mới từ Apify.',
+            status: 'running',
+            stage: 'scan',
+            cycle: cycleIndex,
+            index: 0,
+            total: 0,
+            remaining: 0,
+            source: 'Vòng tự động',
+            target: '',
+            targetLabel: 'TRẠNG THÁI VÒNG',
+            countdown: null,
+            resetStats: true,
+            historyMessage: `Bắt đầu vòng tự động ${cycleIndex}`,
+            historyTag: 'RUNNING',
+            historyLevel: 'running'
+          });
           await ensureFacebookAccountBeforeCycle(cycleIndex);
           S.setBridgeStatus(`Đang chạy vòng ${cycleIndex} bằng Apify API...`, 'warn');
           await scanGroupLinks({ preferApify: true });
@@ -999,6 +1476,22 @@
           S.setPostLinks([]);
           waitReason = `Vòng ${cycleIndex} gặp lỗi tạm thời: ${error.message || error}. Tiến trình vẫn tiếp tục.`;
           S.setBridgeStatus(waitReason, 'warn');
+          reportProcess({
+            actionKey: `cycle-${cycleIndex}-temporary-error`,
+            title: `Vòng ${cycleIndex} gặp lỗi tạm thời`,
+            detail: error.message || String(error),
+            status: 'error',
+            stage: 'scan',
+            cycle: cycleIndex,
+            source: 'Vòng tự động',
+            target: '',
+            targetLabel: 'LỖI TẠM THỜI',
+            countdown: null,
+            statDelta: { errors: 1 },
+            historyMessage: `Vòng ${cycleIndex} gặp lỗi tạm thời, vẫn tiếp tục`,
+            historyTag: 'ERROR',
+            historyLevel: 'error'
+          });
         }
 
         if (!S.isClosedLoopRunning()) break;
@@ -1010,6 +1503,20 @@
       B.stopClosedLoopBtn?.classList.add('hidden');
       if (fatalStopMessage) S.setBridgeStatus(fatalStopMessage, 'error');
       else S.setBridgeStatus('Vòng lặp đã dừng.', 'warn');
+      reportProcess({
+        actionKey: 'closed-loop-stopped',
+        title: fatalStopMessage ? 'Vòng tự động đã dừng do lỗi' : 'Vòng tự động đã dừng',
+        detail: fatalStopMessage || 'Tiến trình đã nhận lệnh dừng và kết thúc an toàn.',
+        status: fatalStopMessage ? 'error' : 'stop',
+        stage: 'scan',
+        source: 'Vòng tự động',
+        target: '',
+        targetLabel: 'TRẠNG THÁI HỆ THỐNG',
+        countdown: null,
+        historyMessage: fatalStopMessage ? 'Vòng tự động dừng do lỗi nghiêm trọng' : 'Vòng tự động đã dừng',
+        historyTag: fatalStopMessage ? 'ERROR' : 'STOP',
+        historyLevel: fatalStopMessage ? 'error' : 'warn'
+      });
     }
   }
 
@@ -1076,11 +1583,29 @@
     B.apifyScanBtn?.addEventListener('click', () => runBridgeTask(
       () => scanGroupLinksByExtension({ preloadRakko: true })
     ).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
-    B.dashboardAutoRunBtn?.addEventListener('click', () => {
-      if (!B.scanGroupLinksBtn || B.scanGroupLinksBtn.disabled) return;
-      B.scanGroupLinksBtn.click();
-    });
-    B.scanGroupLinksBtn?.addEventListener('click', () => runBridgeTask(() => runClosedGroupLoop()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
+    B.dashboardAutoRunBtn?.addEventListener('click', () => runBridgeTask(
+      () => runClosedGroupLoop()
+    ).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
+    B.scanGroupLinksBtn?.addEventListener('click', () => runBridgeTask(
+      () => scanGroupLinksByApify()
+    ).catch(error => {
+      const classification = classifyApifyError(error);
+      S.setBridgeStatus(`Lấy Link API thất bại (${classification.code}): ${classification.message}`, 'error');
+      reportProcess({
+        actionKey: 'api-link-scan-error',
+        title: 'Lấy Link API thất bại',
+        detail: `${classification.code}: ${classification.message}`,
+        status: 'error',
+        stage: 'scan',
+        source: 'Apify API',
+        target: '',
+        targetLabel: 'LỖI API',
+        countdown: null,
+        historyMessage: `Lấy Link API thất bại: ${classification.code}`,
+        historyTag: 'ERROR',
+        historyLevel: 'error'
+      });
+    }));
     B.autoWorkflowBtn?.addEventListener('click', () => runBridgeTask(() => autoWorkflow()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
     B.commentCurrentTabBtn?.addEventListener('click', () => runBridgeTask(() => commentCurrentTab()).catch(error => S.setBridgeStatus(error.message || String(error), 'error')));
     B.stopClosedLoopBtn?.addEventListener('click', () => {

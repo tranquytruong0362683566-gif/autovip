@@ -589,14 +589,46 @@
     const seenLinks = new Set();
     const postByUrl = new Map();
 
-    for (const groupUrl of groupUrls) {
-      const groupResult = await fetchGroupPostUrls({
-        actorId,
-        token,
-        groupUrl,
-        perGroupLimit,
-        sortBy
-      });
+    for (let groupIndex = 0; groupIndex < groupUrls.length; groupIndex += 1) {
+      const groupUrl = groupUrls[groupIndex];
+      const notifyGroupProgress = async detail => {
+        if (typeof options.onGroupProgress !== 'function') return;
+        try {
+          await options.onGroupProgress({
+            actorId,
+            actorLabel: getActorLabel(actorId),
+            groupUrl,
+            groupIndex: groupIndex + 1,
+            totalGroups: groupUrls.length,
+            ...detail
+          });
+        } catch {}
+      };
+
+      await notifyGroupProgress({ phase: 'start' });
+      let groupResult;
+      try {
+        groupResult = await fetchGroupPostUrls({
+          actorId,
+          token,
+          groupUrl,
+          perGroupLimit,
+          sortBy
+        });
+        await notifyGroupProgress({
+          phase: 'complete',
+          itemCount: groupResult.itemCount,
+          linkCount: groupResult.links.length,
+          captionCount: groupResult.captionCount
+        });
+      } catch (error) {
+        await notifyGroupProgress({
+          phase: 'error',
+          code: error?.code || 'APIFY_GROUP_ERROR',
+          message: error?.message || String(error)
+        });
+        throw error;
+      }
 
       groupResults.push(groupResult);
       items.push(...groupResult.items);

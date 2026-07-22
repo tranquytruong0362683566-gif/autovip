@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=20260720-v113-hacker">
   <link rel="manifest" href="./site.webmanifest?v=20260720-v113-hacker">
   <link rel="stylesheet" href="./incokit-workflow-v1.0.5.css?v=20260720-115-transparent-all-panels">
-  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260722-154-compact-workspaces">
+  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260722-155-centered-wide-monitor">
 </head>
 <body>
   <canvas id="magnetic-grid" aria-hidden="true"></canvas>
@@ -20,14 +20,6 @@
 
   <header class="app-header">
     <div class="header-inner">
-      <a class="header-brand" href="#top" aria-label="AI Auto Comment Facebook">
-        <span class="brand-logo brand-image" aria-hidden="true"><img src="./favicon-192x192.png" alt=""></span>
-        <span>
-          <strong>Trần Quý Trường</strong>
-          <small>AI Auto Comment</small>
-        </span>
-      </a>
-
       <nav class="header-nav" aria-label="Điều hướng chính">
         <button class="header-nav-item header-settings-trigger" id="openApiSettingsBtn" type="button" aria-controls="apiSettingsModal">
           <span class="nav-glyph" aria-hidden="true">☷</span><span>Cài Đặt API</span>
@@ -91,25 +83,17 @@
                 <img class="cat-typing-gif" src="./cat-typing-transparent.webp?v=20260721-145-clean-alpha" alt="Mèo đang gõ bàn phím">
               </div>
             </div>
+
+            <button class="btn btn-primary dashboard-auto-run-btn" id="dashboardAutoRunBtn" type="button">
+              <span class="dashboard-auto-run-icon" aria-hidden="true">▶</span>
+              <span>Chạy Tự Động</span>
+            </button>
           </div>
         </div>
         <div class="monitor-stand" aria-hidden="true"><span></span><i></i></div>
       </div>
-
-      <aside class="system-side-panel">
-        <button class="btn btn-primary dashboard-auto-run-btn" id="dashboardAutoRunBtn" type="button">
-          <span class="dashboard-auto-run-icon" aria-hidden="true">▶</span>
-          <span>Chạy Tự Động</span>
-        </button>
-      </aside>
     </section>
   </main>
-
-  <footer class="app-footer">
-    <div><span class="brand-logo brand-image small" aria-hidden="true"><img src="./favicon-192x192.png" alt=""></span><strong>Trần Quý Trường</strong></div>
-    <p>AI Auto Comment Facebook · Web + Extension + API</p>
-    <span class="system-online"><i aria-hidden="true"></i> Giao diện sẵn sàng</span>
-  </footer>
 
   <div class="modal-overlay workspace-overlay" id="workspaceModal" role="dialog" aria-modal="true" aria-labelledby="workspaceModalTitle" aria-hidden="true">
       <div class="modal workspace-modal settings-modal-wide">

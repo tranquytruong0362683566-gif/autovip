@@ -256,6 +256,105 @@
     return '';
   }
 
+  const CAPTION_FIELD_NAMES = new Set([
+    'caption',
+    'postcaption',
+    'posttext',
+    'postcontent'
+  ]);
+
+  function normalizeFieldName(value) {
+    return String(value || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+  }
+
+  function normalizeCaptionValue(value, depth = 0, seen = new WeakSet()) {
+    if (depth > 10 || value == null) return '';
+    if (['string', 'number'].includes(typeof value)) return text(value);
+    if (typeof value !== 'object' || seen.has(value)) return '';
+
+    seen.add(value);
+    if (Array.isArray(value)) {
+      const result = value
+        .map(item => normalizeCaptionValue(item, depth + 1, seen))
+        .filter(Boolean)
+        .join('\n')
+        .trim();
+      seen.delete(value);
+      return result;
+    }
+
+    const preferred = ['text', 'content', 'value', 'description', 'message', 'body', 'caption'];
+    const entries = Object.entries(value);
+    for (const preferredName of preferred) {
+      const entry = entries.find(([key]) => normalizeFieldName(key) === preferredName);
+      if (!entry) continue;
+      const result = normalizeCaptionValue(entry[1], depth + 1, seen);
+      if (result) {
+        seen.delete(value);
+        return result;
+      }
+    }
+
+    for (const nestedValue of Object.values(value)) {
+      const result = normalizeCaptionValue(nestedValue, depth + 1, seen);
+      if (result) {
+        seen.delete(value);
+        return result;
+      }
+    }
+
+    seen.delete(value);
+    return '';
+  }
+
+  function findDirectCaptionEntry(value) {
+    if (!value || Array.isArray(value) || typeof value !== 'object') return null;
+    return Object.entries(value).find(([key]) => CAPTION_FIELD_NAMES.has(normalizeFieldName(key))) || null;
+  }
+
+  function extractDirectCaptionFromObject(value) {
+    const entry = findDirectCaptionEntry(value);
+    return entry ? normalizeCaptionValue(entry[1]) : '';
+  }
+
+  function extractPostCaptionPairs(value) {
+    const pairs = [];
+    const seen = new WeakSet();
+
+    function visit(node, depth = 0) {
+      if (depth > 10 || node == null || typeof node !== 'object' || seen.has(node)) return;
+      seen.add(node);
+
+      if (Array.isArray(node)) {
+        for (const item of node) visit(item, depth + 1);
+        return;
+      }
+
+      const directUrls = [];
+      for (const [key, nestedValue] of Object.entries(node)) {
+        if (isPostUrlFieldName(key)) collectStringValues(nestedValue, directUrls);
+      }
+
+      if (directUrls.length) {
+        const captionEntry = findDirectCaptionEntry(node);
+        const rawCaption = captionEntry?.[1];
+        if (Array.isArray(rawCaption) && rawCaption.length === directUrls.length) {
+          directUrls.forEach((url, index) => {
+            pairs.push({ url, caption: normalizeCaptionValue(rawCaption[index]) });
+          });
+        } else {
+          const caption = extractDirectCaptionFromObject(node);
+          directUrls.forEach(url => pairs.push({ url, caption }));
+        }
+      }
+
+      for (const nestedValue of Object.values(node)) visit(nestedValue, depth + 1);
+    }
+
+    visit(value);
+    return pairs;
+  }
+
   function extractGroupIdFromUrl(value) {
     const normalized = normalizeGroupUrl(value);
     const parsed = parseUrl(normalized);
@@ -287,11 +386,25 @@
   }
 
   function extractCaptionFromItem(item) {
-    return findFirstFieldString(item, [
-      'caption',
-      'post_caption',
-      'postCaption'
-    ]);
+    const seen = new WeakSet();
+
+    function visit(value, depth = 0) {
+      if (depth > 10 || value == null || typeof value !== 'object' || seen.has(value)) return '';
+      seen.add(value);
+
+      if (!Array.isArray(value)) {
+        const directCaption = extractDirectCaptionFromObject(value);
+        if (directCaption) return directCaption;
+      }
+
+      for (const nestedValue of Object.values(value)) {
+        const result = visit(nestedValue, depth + 1);
+        if (result) return result;
+      }
+      return '';
+    }
+
+    return visit(item);
   }
 
   function extractPostUrlFromItem(item) {
@@ -332,7 +445,8 @@
     const fallbackGroupId = extractGroupIdFromUrl(options?.groupUrl);
     const recordByUrl = new Map();
 
-    function addLink(value, item = null) {
+    function addLink(value, item = null, captionOverride = '') {
+      const resolvedCaption = text(captionOverride) || extractCaptionFromItem(item);
       let link = normalizePostUrl(value);
       if (!link) {
         const postId = findFirstFieldString(item, [
@@ -359,7 +473,7 @@
       if (seen.has(link)) {
         diagnostics.duplicatePostUrlCount += 1;
         const existingRecord = recordByUrl.get(link);
-        const duplicateCaption = extractCaptionFromItem(item);
+        const duplicateCaption = resolvedCaption;
         if (existingRecord && !existingRecord.caption && duplicateCaption) {
           existingRecord.caption = duplicateCaption;
         }
@@ -369,7 +483,7 @@
       links.push(link);
       const record = {
         url: link,
-        caption: extractCaptionFromItem(item)
+        caption: resolvedCaption
       };
       recordByUrl.set(link, record);
       diagnostics.postRecords.push(record);
@@ -379,12 +493,15 @@
     // Không dừng ở URL đầu tiên và không giới hạn số URL theo số lượng yêu cầu.
     const itemList = Array.isArray(items) ? items : [];
     for (const item of itemList) {
-      const itemPostUrls = extractPostUrlFieldValues(item);
-      if (itemPostUrls.length) {
-        for (const value of itemPostUrls) addLink(value, item);
+      const itemPairs = extractPostCaptionPairs(item);
+      if (itemPairs.length) {
+        const singleCaptionFallback = itemPairs.length === 1 ? extractCaptionFromItem(item) : '';
+        for (const pair of itemPairs) {
+          addLink(pair.url, item, pair.caption || singleCaptionFallback);
+        }
       } else {
         // Fallback cho Actor dùng tên trường URL khác post_url.
-        addLink(extractPostUrlFromItem(item), item);
+        addLink(extractPostUrlFromItem(item), item, extractCaptionFromItem(item));
       }
     }
 

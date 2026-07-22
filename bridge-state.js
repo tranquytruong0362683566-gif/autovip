@@ -32,9 +32,11 @@
     clearCommentedLinksBtn: $('#clearCommentedLinksBtn'),
     commentedLinksBox: $('#commentedLinksBox'),
     commentedCountStat: $('#commentedCountStat'),
+    footerCommentedCount: $('#footerCommentedCount'),
     clearRemovedLinksBtn: $('#clearRemovedLinksBtn'),
     removedLinksBox: $('#removedLinksBox'),
-    removedCountStat: $('#removedCountStat')
+    removedCountStat: $('#removedCountStat'),
+    footerRemovedCount: $('#footerRemovedCount')
   };
 
   const STORE = {
@@ -237,6 +239,7 @@
     const list = getCommentedLinks();
     if (B.commentedLinksBox) B.commentedLinksBox.value = list.join('\n');
     if (B.commentedCountStat) B.commentedCountStat.textContent = String(list.length);
+    if (B.footerCommentedCount) B.footerCommentedCount.textContent = String(list.length);
   }
 
   function getRemovedLinks() {
@@ -247,6 +250,7 @@
     const list = getRemovedLinks();
     if (B.removedLinksBox) B.removedLinksBox.value = list.join('\n');
     if (B.removedCountStat) B.removedCountStat.textContent = String(list.length);
+    if (B.footerRemovedCount) B.footerRemovedCount.textContent = String(list.length);
   }
 
   function filterLinksAgainstHistory(links) {
@@ -283,13 +287,53 @@
     return filterLinksAgainstHistory(links).links;
   }
 
+  function normalizeCaptionValue(value, depth = 0, seen = new WeakSet()) {
+    if (depth > 10 || value == null) return '';
+    if (['string', 'number'].includes(typeof value)) return text(value);
+    if (typeof value !== 'object' || seen.has(value)) return '';
+
+    seen.add(value);
+    if (Array.isArray(value)) {
+      const result = value
+        .map(item => normalizeCaptionValue(item, depth + 1, seen))
+        .filter(Boolean)
+        .join('\n')
+        .trim();
+      seen.delete(value);
+      return result;
+    }
+
+    const preferredFields = ['text', 'content', 'value', 'description', 'message', 'body', 'caption'];
+    const entries = Object.entries(value);
+    for (const fieldName of preferredFields) {
+      const entry = entries.find(([key]) => String(key).replace(/[^a-z0-9]/gi, '').toLowerCase() === fieldName);
+      if (!entry) continue;
+      const result = normalizeCaptionValue(entry[1], depth + 1, seen);
+      if (result) {
+        seen.delete(value);
+        return result;
+      }
+    }
+
+    for (const nestedValue of Object.values(value)) {
+      const result = normalizeCaptionValue(nestedValue, depth + 1, seen);
+      if (result) {
+        seen.delete(value);
+        return result;
+      }
+    }
+
+    seen.delete(value);
+    return '';
+  }
+
   function getPostCaptionMap() {
     const stored = load(STORE.postCaptions, {});
     if (!stored || Array.isArray(stored) || typeof stored !== 'object') return {};
     const captions = {};
     for (const [url, caption] of Object.entries(stored)) {
       const key = normalizeUrl(url);
-      const value = text(caption);
+      const value = normalizeCaptionValue(caption);
       if (key && value) captions[key] = value;
     }
     return captions;
@@ -299,7 +343,16 @@
     const captions = {};
     for (const record of Array.isArray(records) ? records : []) {
       const key = normalizeUrl(record?.url || record?.link);
-      const caption = text(record?.caption);
+      const caption = normalizeCaptionValue(
+        record?.caption ??
+        record?.post_caption ??
+        record?.postCaption ??
+        record?.post_text ??
+        record?.postText ??
+        record?.post_content ??
+        record?.postContent ??
+        ''
+      );
       if (!key || !caption) continue;
       captions[key] = caption;
     }

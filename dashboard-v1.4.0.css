@@ -79,7 +79,7 @@
   cursor: pointer;
   text-decoration: none;
   font-family: var(--ink-font);
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 400;
   line-height: 1;
   white-space: nowrap;
@@ -94,22 +94,23 @@
 .header-nav a.header-nav-item:hover,
 .header-nav button.header-nav-item:hover {
   color: #f0fff4;
-  background: rgba(35, 123, 60, .18);
-  border-color: rgba(56, 242, 106, .25);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
   transform: translateY(-1px);
 }
 
 .header-nav-item.is-active,
 .header-nav button.header-nav-item.is-active {
   color: #f0fff4;
-  background: rgba(35, 123, 60, .25);
-  border-color: rgba(56, 242, 106, .48);
-  box-shadow: inset 0 0 18px rgba(56, 242, 106, .08), 0 0 18px rgba(56, 242, 106, .08);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .header-settings-trigger:first-child {
-  background: rgba(25, 111, 50, .23);
-  border-color: rgba(56, 242, 106, .14);
+  background: transparent;
+  border-color: transparent;
 }
 
 .nav-glyph {
@@ -940,10 +941,10 @@
 .workspace-modal-content .output-box,
 .workspace-modal-content .templates-section,
 .workspace-modal-content .record-card {
-  padding: 18px;
-  background: rgba(6, 24, 12, .34);
-  border-color: rgba(56, 242, 106, .2);
-  border-radius: 14px;
+  padding: 2px;
+  background: transparent;
+  border-color: transparent;
+  border-radius: 0;
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -1016,10 +1017,10 @@
 .workspace-modal-content .composer-article,
 .workspace-modal-content .product-settings,
 .workspace-modal-content .template-group {
-  padding: 15px;
-  background: rgba(2, 15, 7, .34);
-  border-color: rgba(56, 242, 106, .14);
-  border-radius: 11px;
+  padding: 0;
+  background: transparent;
+  border-color: transparent;
+  border-radius: 0;
   box-shadow: none;
 }
 
@@ -1143,13 +1144,107 @@
 }
 
 .settings-section {
-  padding: 18px;
-  background: rgba(6, 24, 12, .34);
-  border-color: rgba(56, 242, 106, .2);
+  padding: 2px;
+  background: transparent;
+  border-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .settings-section:hover {
   transform: none;
+}
+
+.settings-modal .auth-bar {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.workspace-modal-content .record-card::before {
+  display: none;
+}
+
+.workspace-modal-content .tpl-empty,
+.workspace-modal-content .tpl-item {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(56, 242, 106, .14);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.workspace-modal-content .tpl-item:hover,
+.workspace-modal-content .tpl-item.active {
+  background: transparent;
+  border-color: rgba(56, 242, 106, .28);
+  box-shadow: none;
+  transform: none;
+}
+
+.app-summary-strip {
+  position: relative;
+  z-index: 2;
+  min-height: 58px;
+  padding: 0 24px;
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid rgba(56, 242, 106, .2);
+  background: rgba(2, 14, 7, .45);
+}
+
+.app-summary-strip-inner {
+  width: min(100%, 760px);
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  color: #aebbb2;
+}
+
+.summary-strip-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.summary-strip-item i {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--dashboard-neon);
+  box-shadow: 0 0 10px rgba(56, 242, 106, .6);
+}
+
+.summary-strip-item strong {
+  color: var(--dashboard-neon);
+  font-family: var(--ink-mono);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.summary-strip-removed strong {
+  color: #f4c15d;
+}
+
+.summary-strip-removed i {
+  background: #f4c15d;
+  box-shadow: 0 0 10px rgba(244, 193, 93, .42);
+}
+
+.summary-strip-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(56, 242, 106, .2);
 }
 
 .settings-modal-actions {
@@ -1441,7 +1536,7 @@
   .workspace-modal-content .output-box,
   .workspace-modal-content .templates-section,
   .workspace-modal-content .record-card {
-    padding: 14px;
+    padding: 0;
   }
 
   .workspace-modal-actions {
@@ -1456,6 +1551,23 @@
 
   .workspace-modal-shortcut {
     text-align: center;
+  }
+
+  .app-summary-strip {
+    padding: 0 10px;
+  }
+
+  .app-summary-strip-inner {
+    gap: 12px;
+  }
+
+  .summary-strip-item {
+    gap: 4px;
+    font-size: 11px;
+  }
+
+  .summary-strip-item strong {
+    font-size: 14px;
   }
 
 }

@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=20260720-v113-hacker">
   <link rel="manifest" href="./site.webmanifest?v=20260720-v113-hacker">
   <link rel="stylesheet" href="./incokit-workflow-v1.0.5.css?v=20260720-115-transparent-all-panels">
-  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260722-155-centered-wide-monitor">
+  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260722-156-flat-modals-summary">
 </head>
 <body>
   <canvas id="magnetic-grid" aria-hidden="true"></canvas>
@@ -94,6 +94,24 @@
       </div>
     </section>
   </main>
+
+  <footer class="app-summary-strip" aria-label="Thống kê xử lý bài viết">
+    <div class="app-summary-strip-inner">
+      <span class="summary-strip-item summary-strip-success">
+        <i aria-hidden="true"></i>
+        <span>Đã bình luận</span>
+        <strong id="footerCommentedCount">0</strong>
+        <span>bài viết</span>
+      </span>
+      <span class="summary-strip-divider" aria-hidden="true"></span>
+      <span class="summary-strip-item summary-strip-removed">
+        <i aria-hidden="true"></i>
+        <span>Đã loại bỏ</span>
+        <strong id="footerRemovedCount">0</strong>
+        <span>bài viết</span>
+      </span>
+    </div>
+  </footer>
 
   <div class="modal-overlay workspace-overlay" id="workspaceModal" role="dialog" aria-modal="true" aria-labelledby="workspaceModalTitle" aria-hidden="true">
       <div class="modal workspace-modal settings-modal-wide">
@@ -476,10 +494,10 @@
 
   <script src="incokit-ui-v1.0.5.js?v=20260720-113"></script>
   <script src="chatgpt-api.js?v=20260721-145-single-template-store"></script>
-  <script src="bridge-state.js?v=20260722-152-history-only"></script>
+  <script src="bridge-state.js?v=20260722-156-summary-strip"></script>
   <script src="bridge-api.js?v=20260720-113"></script>
-  <script src="apify-api.js?v=20260722-151-group-progress"></script>
-  <script src="bridge-workflow.js?v=20260722-153-inline-account"></script>
+  <script src="apify-api.js?v=20260722-156-caption-mapping"></script>
+  <script src="bridge-workflow.js?v=20260722-156-apify-caption"></script>
   <script src="dashboard-v1.4.0.js?v=20260722-154-compact-workspaces"></script>
 </body>
 </html>

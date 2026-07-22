@@ -1108,12 +1108,12 @@
     return article;
   }
 
-  async function loadArticleForLink(link) {
+  async function loadArticleForLink(link, { allowRakkoFallback = true } = {}) {
     const caption = S.getPostCaption(link);
     if (caption) {
       await closeActiveReadTabIfAny();
       const article = setArticleInputContent(caption);
-      S.setBridgeStatus('Đã lấy nội dung đã ghép sẵn từ Apify/Rakko và điền vào ô Nội dung bài viết gốc; không gọi API đọc lại.', 'ok');
+      S.setBridgeStatus('Đã lấy caption từ Apify và điền vào ô Nội dung bài viết gốc; không gọi Rakko API.', 'ok');
       reportProcess({
         actionKey: 'load-apify-caption',
         title: 'Đã nạp caption từ kết quả Apify',
@@ -1129,6 +1129,12 @@
         historyLevel: 'ok'
       });
       return { article, source: 'cached_caption' };
+    }
+
+    if (!allowRakkoFallback) {
+      const error = new Error('Apify không trả caption cho link này. Hệ thống đã bỏ qua link và không gọi Rakko API.');
+      error.code = 'APIFY_CAPTION_MISSING';
+      throw error;
     }
 
     S.setBridgeStatus('Nội dung ghép sẵn của link này đang rỗng. Đang gọi Rakko API làm dự phòng...', 'warn');
@@ -1317,7 +1323,7 @@
     return response;
   }
 
-  async function autoWorkflow({ manageLoopState = true } = {}) {
+  async function autoWorkflow({ manageLoopState = true, allowRakkoFallback = true } = {}) {
     let links = S.getPostLinks();
     if (!links.length) {
       S.setBridgeStatus('Chưa có link bài viết. Hãy quét nhóm hoặc dán link trước.', 'warn');
@@ -1346,7 +1352,7 @@
             status: 'running',
             stage: 'scan',
             ...queueProcessMeta(index + 1, queue.length),
-            source: S.getPostCaption(link) ? 'Caption Apify' : 'Rakko dự phòng',
+            source: S.getPostCaption(link) ? 'Caption Apify' : (allowRakkoFallback ? 'Rakko dự phòng' : 'Apify thiếu caption'),
             target: link,
             targetLabel: 'LINK ĐANG XỬ LÝ',
             countdown: null,
@@ -1355,7 +1361,7 @@
             historyLevel: 'running'
           });
           S.setPostLinks([link, ...S.getPostLinks().filter(item => S.normalizeUrl(item) !== S.normalizeUrl(link))]);
-          await loadArticleForLink(link);
+          await loadArticleForLink(link, { allowRakkoFallback });
 
           const controller = window.chatGPTApiController || {};
           if (!controller.generateComment) throw new Error('Chưa nạp được hàm gọi API ChatGPT.');
@@ -1588,7 +1594,7 @@
             waitReason = `Vòng ${cycleIndex} không có link mới; đây là trạng thái bình thường.`;
           } else {
             S.setBridgeStatus(`Vòng ${cycleIndex}: đã lọc xong link. Đang nạp nội dung của link đầu tiên...`, 'warn');
-            await autoWorkflow({ manageLoopState: false });
+            await autoWorkflow({ manageLoopState: false, allowRakkoFallback: false });
             waitReason = `Vòng ${cycleIndex} đã xử lý xong hàng đợi.`;
           }
         } catch (error) {

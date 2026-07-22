@@ -143,6 +143,8 @@
       historyMessage: payload.historyMessage || '',
       historyTag: payload.historyTag || '',
       historyLevel: payload.historyLevel || '',
+      historyKey: payload.historyKey || '',
+      historyMode: payload.historyMode || '',
       statDelta: payload.statDelta && typeof payload.statDelta === 'object' ? payload.statDelta : null,
       resetStats: payload.resetStats === true,
       sequence: bridgeState.processSerial,

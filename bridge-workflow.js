@@ -479,10 +479,12 @@
     return loggedInAccount;
   }
 
-  async function waitAfterLink(linkIndex, totalLinks) {
+  async function waitAfterLink(linkIndex, totalLinks, nextLink = '') {
     const seconds = S.getLinkPauseSeconds();
     if (seconds <= 0 || !S.isClosedLoopRunning()) return;
 
+    const historyKey = `wait-link-${linkIndex}-${totalLinks}-${Date.now()}`;
+    const cleanNextLink = S.normalizeUrl(nextLink) || S.text(nextLink);
     const endAt = Date.now() + seconds * 1000;
     while (S.isClosedLoopRunning() && Date.now() < endAt) {
       const remainMs = Math.max(0, endAt - Date.now());
@@ -498,11 +500,34 @@
         source: 'Hàng đợi',
         countdown: remainSeconds,
         countdownLabel: 'Chuyển sang link tiếp theo sau',
-        historyMessage: remainSeconds === seconds ? `Hoàn tất link ${linkIndex}/${totalLinks}, bắt đầu thời gian nghỉ` : '',
+        historyMessage: `Đã xong link ${linkIndex}/${totalLinks} · chờ ${remainSeconds} giây trước link tiếp theo${cleanNextLink ? `: ${cleanNextLink}` : ''}`,
         historyTag: 'WAIT',
-        historyLevel: 'warn'
+        historyLevel: 'warn',
+        historyKey,
+        historyMode: 'update'
       });
       await S.delay(Math.min(1000, Math.max(200, remainMs)));
+    }
+
+    if (S.isClosedLoopRunning()) {
+      reportProcess({
+        actionKey: `wait-link-${linkIndex}-${totalLinks}`,
+        title: 'Bắt đầu xử lý link tiếp theo',
+        detail: `Đã chờ đủ ${seconds} giây sau link ${linkIndex}/${totalLinks}.`,
+        status: 'running',
+        stage: 'scan',
+        ...queueProcessMeta(linkIndex, totalLinks),
+        source: 'Hàng đợi',
+        target: cleanNextLink,
+        targetLabel: 'LINK TIẾP THEO',
+        countdown: 0,
+        countdownLabel: 'Chuyển sang link tiếp theo sau',
+        historyMessage: `Đã xong link ${linkIndex}/${totalLinks} · còn 0 giây · chuyển sang${cleanNextLink ? ` ${cleanNextLink}` : ' link tiếp theo'}`,
+        historyTag: 'READY',
+        historyLevel: 'ok',
+        historyKey,
+        historyMode: 'update'
+      });
     }
   }
 
@@ -740,73 +765,101 @@
     const modeLabel = scanModeLabel(scanMode);
     const normalizedGroups = [...new Set(groups.map(group => APIFY.normalizeGroupUrl(group)).filter(Boolean))];
     const requestedTotal = groupLimit * normalizedGroups.length;
+    const apifyHistoryKey = `apify-request-${Date.now()}`;
 
-    const result = await APIFY.fetchPostUrlsWithFallback({
-      actorId,
-      token,
-      groups,
-      limit: groupLimit,
-      scanMode,
-      onActorAttempt: ({ actorLabel, attempt, total, previousError }) => {
-        const retryText = previousError
-          ? ` Actor trước bị lỗi: ${previousError.message || previousError}. Đang tự chuyển Actor...`
-          : '';
-        S.setBridgeStatus(
-          `${retryText} Đang gọi ${actorLabel} (${attempt}/${total}) theo ${normalizedGroups.length} lượt độc lập, yêu cầu ${groupLimit} bài mỗi nhóm (${requestedTotal} bài).`,
-          'warn'
-        );
-        reportProcess({
-          actionKey: `apify-actor-${attempt}`,
-          title: `Kết nối ${actorLabel}`,
-          detail: `${normalizedGroups.length} nhóm · yêu cầu ${groupLimit} bài/nhóm · Actor ${attempt}/${total}.`,
-          status: 'running',
-          stage: 'scan',
-          index: 0,
-          total: normalizedGroups.length,
-          remaining: normalizedGroups.length,
-          source: actorLabel,
-          target: normalizedGroups[0] || '',
-          targetLabel: 'NHÓM CHỜ QUÉT',
-          countdown: null,
-          historyMessage: `Gọi ${actorLabel} để quét ${normalizedGroups.length} nhóm`,
-          historyTag: 'RUNNING',
-          historyLevel: 'running'
-        });
-      },
-      onGroupProgress: ({ phase, actorLabel, groupUrl, groupIndex, totalGroups, itemCount, linkCount, captionCount, message }) => {
-        const completed = phase === 'complete';
-        const failed = phase === 'error';
-        reportProcess({
-          actionKey: `apify-group-${groupIndex}-${phase}`,
-          title: failed
-            ? `Lỗi khi quét nhóm ${groupIndex}/${totalGroups}`
-            : completed
-              ? `Đã quét xong nhóm ${groupIndex}/${totalGroups}`
-              : `Apify đang quét nhóm ${groupIndex}/${totalGroups}`,
-          detail: failed
-            ? (message || 'Actor không trả được dữ liệu nhóm hiện tại.')
-            : completed
-              ? `Nhận ${itemCount || 0} bản ghi · ${linkCount || 0} link · ${captionCount || 0} caption.`
-              : `Đang chờ Actor phản hồi dữ liệu của nhóm hiện tại.`,
-          status: failed ? 'error' : completed ? 'ok' : 'running',
-          stage: 'scan',
-          index: completed ? groupIndex : Math.max(0, groupIndex - 1),
-          total: totalGroups,
-          remaining: Math.max(0, totalGroups - (completed ? groupIndex : groupIndex - 1)),
-          source: actorLabel,
-          target: groupUrl,
-          targetLabel: 'NHÓM ĐANG QUÉT',
-          countdown: null,
-          historyMessage: completed
-            ? `Nhóm ${groupIndex}/${totalGroups}: ${itemCount || 0} bản ghi, ${linkCount || 0} link`
-            : failed
-              ? `Nhóm ${groupIndex}/${totalGroups} gặp lỗi Apify`
-              : '',
-          historyTag: failed ? 'ERROR' : 'OK',
-          historyLevel: failed ? 'error' : 'ok'
-        });
-      }
-    });
+    let result;
+    try {
+      result = await APIFY.fetchPostUrlsWithFallback({
+        actorId,
+        token,
+        groups,
+        limit: groupLimit,
+        scanMode,
+        onActorAttempt: ({ actorLabel, attempt, total, previousError }) => {
+          const retryText = previousError
+            ? ` Actor trước bị lỗi: ${previousError.message || previousError}. Đang tự chuyển Actor...`
+            : '';
+          S.setBridgeStatus(
+            `${retryText} Đang gọi ${actorLabel} (${attempt}/${total}) theo ${normalizedGroups.length} lượt độc lập, yêu cầu ${groupLimit} bài mỗi nhóm (${requestedTotal} bài).`,
+            'warn'
+          );
+          reportProcess({
+            actionKey: `apify-actor-${attempt}`,
+            title: `Kết nối ${actorLabel}`,
+            detail: `${normalizedGroups.length} nhóm · yêu cầu ${groupLimit} bài/nhóm · Actor ${attempt}/${total}.`,
+            status: 'running',
+            stage: 'scan',
+            index: 0,
+            total: normalizedGroups.length,
+            remaining: normalizedGroups.length,
+            source: actorLabel,
+            target: normalizedGroups[0] || '',
+            targetLabel: 'NHÓM CHỜ QUÉT',
+            countdown: null,
+            historyMessage: `Đang chờ Apify (${actorLabel}) trả kết quả · Actor ${attempt}/${total} · ${normalizedGroups.length} nhóm · yêu cầu ${requestedTotal} bài`,
+            historyTag: 'RUNNING',
+            historyLevel: 'running',
+            historyKey: apifyHistoryKey,
+            historyMode: 'update'
+          });
+        },
+        onGroupProgress: ({ phase, actorLabel, groupUrl, groupIndex, totalGroups, itemCount, linkCount, captionCount, message }) => {
+          const completed = phase === 'complete';
+          const failed = phase === 'error';
+          reportProcess({
+            actionKey: `apify-group-${groupIndex}-${phase}`,
+            title: failed
+              ? `Lỗi khi quét nhóm ${groupIndex}/${totalGroups}`
+              : completed
+                ? `Đã quét xong nhóm ${groupIndex}/${totalGroups}`
+                : `Apify đang quét nhóm ${groupIndex}/${totalGroups}`,
+            detail: failed
+              ? (message || 'Actor không trả được dữ liệu nhóm hiện tại.')
+              : completed
+                ? `Nhận ${itemCount || 0} bản ghi · ${linkCount || 0} link · ${captionCount || 0} caption.`
+                : `Đang chờ Actor phản hồi dữ liệu của nhóm hiện tại.`,
+            status: failed ? 'error' : completed ? 'ok' : 'running',
+            stage: 'scan',
+            index: completed ? groupIndex : Math.max(0, groupIndex - 1),
+            total: totalGroups,
+            remaining: Math.max(0, totalGroups - (completed ? groupIndex : groupIndex - 1)),
+            source: actorLabel,
+            target: groupUrl,
+            targetLabel: 'NHÓM ĐANG QUÉT',
+            countdown: null,
+            historyMessage: failed
+              ? `Apify lỗi tại nhóm ${groupIndex}/${totalGroups}: ${groupUrl} · ${message || 'Không nhận được dữ liệu'}`
+              : completed
+                ? `Apify đã trả nhóm ${groupIndex}/${totalGroups}: ${groupUrl} · ${itemCount || 0} bản ghi · ${linkCount || 0} link · ${captionCount || 0} caption`
+                : `Đang chờ Apify trả nhóm ${groupIndex}/${totalGroups}: ${groupUrl}`,
+            historyTag: failed ? 'ERROR' : completed ? 'RUNNING' : 'RUNNING',
+            historyLevel: failed ? 'error' : 'running',
+            historyKey: apifyHistoryKey,
+            historyMode: 'update'
+          });
+        }
+      });
+    } catch (error) {
+      const classification = classifyApifyError(error);
+      reportProcess({
+        actionKey: 'api-link-scan-error',
+        title: 'Lấy Link API thất bại',
+        detail: `${classification.code}: ${classification.message}`,
+        status: 'error',
+        stage: 'scan',
+        source: 'Apify API',
+        target: '',
+        targetLabel: 'LỖI API',
+        countdown: null,
+        historyMessage: `Apify thất bại · ${classification.code}: ${classification.message}`,
+        historyTag: 'ERROR',
+        historyLevel: 'error',
+        historyKey: apifyHistoryKey,
+        historyMode: 'update'
+      });
+      if (error && typeof error === 'object') error.autovipApifyHistoryReported = true;
+      throw error;
+    }
     const groupResults = Array.isArray(result.groupResults) ? result.groupResults : [];
     const hasValidActorLinks = Array.isArray(result.links) && result.links.length > 0;
     const workingActorId = hasValidActorLinks ? S.setApifyActorId(result.actorId) : actorId;
@@ -864,9 +917,11 @@
         target: links[0] || '',
         targetLabel: 'LINK ĐẦU HÀNG ĐỢI',
         countdown: null,
-        historyMessage: `Lấy Link API hoàn tất, nạp ${links.length} link mới`,
+        historyMessage: `Apify hoàn tất · ${result.itemCount} bản ghi · ${links.length} link mới · ${savedCaptionCount} caption · đã nạp vào Danh sách link bài viết Facebook`,
         historyTag: 'OK',
-        historyLevel: 'ok'
+        historyLevel: 'ok',
+        historyKey: apifyHistoryKey,
+        historyMode: 'update'
       });
     } else if (result.noLinksReason === 'no_valid_post_urls') {
       S.setBridgeStatus(
@@ -888,7 +943,9 @@
         countdown: null,
         historyMessage: 'Apify phản hồi nhưng không có post_url hợp lệ',
         historyTag: 'IDLE',
-        historyLevel: 'warn'
+        historyLevel: 'warn',
+        historyKey: apifyHistoryKey,
+        historyMode: 'update'
       });
     } else if (result.itemCount > 0) {
       S.setBridgeStatus(
@@ -910,7 +967,9 @@
         countdown: null,
         historyMessage: 'Dữ liệu Apify không còn link mới sau khi lọc',
         historyTag: 'IDLE',
-        historyLevel: 'warn'
+        historyLevel: 'warn',
+        historyKey: apifyHistoryKey,
+        historyMode: 'update'
       });
     } else {
       S.setBridgeStatus(`Apify chạy thành công nhưng vòng này không có bài viết mới. Đây là trạng thái bình thường.${actorStatusText}`, 'warn');
@@ -929,7 +988,9 @@
         countdown: null,
         historyMessage: 'Apify hoạt động bình thường nhưng chưa có bài mới',
         historyTag: 'IDLE',
-        historyLevel: 'warn'
+        historyLevel: 'warn',
+        historyKey: apifyHistoryKey,
+        historyMode: 'update'
       });
     }
 
@@ -1081,6 +1142,9 @@
     S.setBridgeStatus('Đang mở tab Facebook ẩn, chờ tải trang và gửi bình luận...', 'warn');
 
     const targetLink = link || S.getPostLinks()[0] || '';
+    const cleanTargetLink = S.normalizeUrl(targetLink) || S.text(targetLink);
+    const cleanComment = S.text(comment).replace(/\s+/g, ' ');
+    const commentHistoryKey = `facebook-comment-${Date.now()}`;
     reportProcess({
       actionKey: 'facebook-comment-submit',
       title: 'Đang gửi bình luận lên Facebook',
@@ -1091,31 +1155,56 @@
       target: targetLink,
       targetLabel: 'LINK ĐANG BÌNH LUẬN',
       countdown: null,
-      historyMessage: 'Mở tab Facebook và bắt đầu gửi bình luận',
+      historyMessage: `Đang bình luận vào ${cleanTargetLink || 'link Facebook hiện tại'} · Nội dung: “${cleanComment}”`,
       historyTag: 'RUNNING',
-      historyLevel: 'running'
+      historyLevel: 'running',
+      historyKey: commentHistoryKey,
+      historyMode: 'update'
     });
     const activeTabId = S.getActiveReadTabId();
     const activeLink = S.getActiveReadLink();
     const tabId = activeTabId && S.normalizeUrl(activeLink) === S.normalizeUrl(targetLink) ? activeTabId : null;
-    const response = await API.sendBridge(
-      ['COMMENT_IN_FB_TAB', 'COMMENT_FB_POST', 'COMMENT_FACEBOOK_POST', 'commentFbPost', 'commentFacebookPost', 'COMMENT_POST', 'COMMENT_CURRENT_TAB'],
-      {
-        tabId,
-        url: targetLink,
-        link: targetLink,
-        comment,
-        text: comment,
-        commentText: comment,
-        waitAfterSendMinMs: 11000,
-        waitAfterSendMaxMs: 11000,
-        closeAfterComment: CLOSE_TAB_AFTER_COMMENT,
-        closeAfter: CLOSE_TAB_AFTER_COMMENT,
-        openInBackground: true,
-        activateTab: false,
-        active: false
-      }
-    );
+    let response;
+    try {
+      response = await API.sendBridge(
+        ['COMMENT_IN_FB_TAB', 'COMMENT_FB_POST', 'COMMENT_FACEBOOK_POST', 'commentFbPost', 'commentFacebookPost', 'COMMENT_POST', 'COMMENT_CURRENT_TAB'],
+        {
+          tabId,
+          url: targetLink,
+          link: targetLink,
+          comment,
+          text: comment,
+          commentText: comment,
+          waitAfterSendMinMs: 11000,
+          waitAfterSendMaxMs: 11000,
+          closeAfterComment: CLOSE_TAB_AFTER_COMMENT,
+          closeAfter: CLOSE_TAB_AFTER_COMMENT,
+          openInBackground: true,
+          activateTab: false,
+          active: false
+        }
+      );
+    } catch (error) {
+      reportProcess({
+        actionKey: 'facebook-comment-error',
+        title: 'Gửi bình luận Facebook thất bại',
+        detail: error.message || String(error),
+        status: 'error',
+        stage: 'comment',
+        source: 'Facebook Extension',
+        target: cleanTargetLink,
+        targetLabel: 'LINK GẶP LỖI',
+        countdown: null,
+        statDelta: { errors: 1 },
+        historyMessage: `Gửi bình luận thất bại tại ${cleanTargetLink || 'link Facebook hiện tại'} · Nội dung: “${cleanComment}” · Lỗi: ${error.message || error}`,
+        historyTag: 'ERROR',
+        historyLevel: 'error',
+        historyKey: commentHistoryKey,
+        historyMode: 'update'
+      });
+      if (error && typeof error === 'object') error.autovipCommentHistoryReported = true;
+      throw error;
+    }
 
     const responseData = API.bridgeResponseData(response);
     if (isDeletedFacebookPostResult(response)) {
@@ -1133,9 +1222,11 @@
         targetLabel: 'LINK ĐÃ LOẠI BỎ',
         countdown: null,
         statDelta: { skipped: 1 },
-        historyMessage: 'Bài viết đã bị xóa, chuyển sang link tiếp theo',
+        historyMessage: `Không thể bình luận vì bài đã bị xóa: ${cleanTargetLink} · Nội dung dự kiến: “${cleanComment}”`,
         historyTag: 'NEXT',
-        historyLevel: 'warn'
+        historyLevel: 'warn',
+        historyKey: commentHistoryKey,
+        historyMode: 'update'
       });
       return response;
     }
@@ -1172,9 +1263,11 @@
         targetLabel: 'LINK GẶP LỖI',
         countdown: null,
         statDelta: { errors: 1 },
-        historyMessage: 'Facebook giới hạn tính năng, vòng tự động đã dừng',
+        historyMessage: `Facebook giới hạn bình luận tại ${cleanTargetLink} · Nội dung: “${cleanComment}”`,
         historyTag: 'ERROR',
-        historyLevel: 'error'
+        historyLevel: 'error',
+        historyKey: commentHistoryKey,
+        historyMode: 'update'
       });
       const stopError = new Error(fatalStopMessage);
       stopError.stopClosedLoop = true;
@@ -1195,9 +1288,11 @@
       targetLabel: 'LINK ĐÃ BÌNH LUẬN',
       countdown: null,
       statDelta: { success: 1 },
-      historyMessage: 'Bình luận Facebook thành công',
+      historyMessage: `Đã bình luận thành công vào ${cleanTargetLink || 'link Facebook hiện tại'} · Nội dung: “${cleanComment}”`,
       historyTag: 'OK',
-      historyLevel: 'ok'
+      historyLevel: 'ok',
+      historyKey: commentHistoryKey,
+      historyMode: 'update'
     });
     return response;
   }
@@ -1332,15 +1427,15 @@
             target: link,
             targetLabel: 'LINK GẶP LỖI',
             countdown: null,
-            statDelta: { errors: 1 },
-            historyMessage: `Link ${index + 1}/${queue.length} gặp lỗi, chuyển link tiếp theo`,
+            statDelta: error?.autovipCommentHistoryReported ? null : { errors: 1 },
+            historyMessage: error?.autovipCommentHistoryReported ? '' : `Link ${index + 1}/${queue.length} gặp lỗi, chuyển link tiếp theo`,
             historyTag: 'ERROR',
             historyLevel: 'error'
           });
           S.setPostLinks(S.getPostLinks().filter(item => S.normalizeUrl(item) !== S.normalizeUrl(link)));
         }
 
-        if (index < queue.length - 1) await waitAfterLink(index + 1, queue.length);
+        if (index < queue.length - 1) await waitAfterLink(index + 1, queue.length, queue[index + 1]);
       }
     } finally {
       if (manageLoopState) {
@@ -1375,6 +1470,7 @@
     const seconds = S.getLoopPauseSeconds();
     const totalMs = seconds * 1000;
     const prefix = S.text(reason) || `Vòng ${cycleIndex} đã xong.`;
+    const historyKey = `wait-cycle-${cycleIndex}-${Date.now()}`;
     if (totalMs <= 0) {
       S.setBridgeStatus(`${prefix} Nghỉ 0 giây, quét tiếp ngay...`, 'warn');
       reportProcess({
@@ -1388,7 +1484,12 @@
         target: '',
         targetLabel: 'TRẠNG THÁI VÒNG',
         countdown: 0,
-        countdownLabel: 'Quét vòng tiếp theo sau'
+        countdownLabel: 'Quét vòng tiếp theo sau',
+        historyMessage: `${prefix} Còn 0 giây · bắt đầu vòng ${cycleIndex + 1}`,
+        historyTag: 'READY',
+        historyLevel: 'ok',
+        historyKey,
+        historyMode: 'update'
       });
       await S.delay(500);
       return;
@@ -1411,11 +1512,34 @@
         targetLabel: 'TRẠNG THÁI VÒNG',
         countdown: remainSeconds,
         countdownLabel: 'Quét vòng tiếp theo sau',
-        historyMessage: remainSeconds === seconds ? `Vòng ${cycleIndex} hoàn tất, bắt đầu thời gian nghỉ` : '',
+        historyMessage: `${prefix} Chờ ${remainSeconds} giây trước vòng ${cycleIndex + 1}`,
         historyTag: 'WAIT',
-        historyLevel: 'warn'
+        historyLevel: 'warn',
+        historyKey,
+        historyMode: 'update'
       });
       await S.delay(Math.min(1000, remainMs));
+    }
+
+    if (S.isClosedLoopRunning()) {
+      reportProcess({
+        actionKey: `wait-cycle-${cycleIndex}`,
+        title: `Bắt đầu vòng tự động ${cycleIndex + 1}`,
+        detail: prefix,
+        status: 'running',
+        stage: 'scan',
+        cycle: cycleIndex,
+        source: 'Vòng tự động',
+        target: '',
+        targetLabel: 'TRẠNG THÁI VÒNG',
+        countdown: 0,
+        countdownLabel: 'Quét vòng tiếp theo sau',
+        historyMessage: `${prefix} Còn 0 giây · bắt đầu vòng ${cycleIndex + 1}`,
+        historyTag: 'READY',
+        historyLevel: 'ok',
+        historyKey,
+        historyMode: 'update'
+      });
     }
   }
 
@@ -1591,6 +1715,7 @@
     ).catch(error => {
       const classification = classifyApifyError(error);
       S.setBridgeStatus(`Lấy Link API thất bại (${classification.code}): ${classification.message}`, 'error');
+      if (error?.autovipApifyHistoryReported) return;
       reportProcess({
         actionKey: 'api-link-scan-error',
         title: 'Lấy Link API thất bại',

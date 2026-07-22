@@ -5,12 +5,11 @@
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 
   const VIETNAM_TIME_ZONE = 'Asia/Ho_Chi_Minh';
-  const MAX_TERMINAL_LINES = 7;
+  const MAX_TERMINAL_LINES = 10;
 
   const dashboardState = {
     initialized: false,
     clockTimer: null,
-    processTimer: null,
     statusObserver: null,
     outputObserver: null,
     processEventHandler: null,
@@ -511,43 +510,60 @@
     updateProcessElapsed();
 
     if (fromEvent && isNewEvent && normalizeText(detail.historyMessage)) {
-      const historyKey = `${detail.sequence || detail.timestamp || ''}:${normalizeText(detail.historyMessage)}`;
+      const explicitHistoryKey = normalizeText(detail.historyKey);
+      const historyKey = explicitHistoryKey || `${detail.sequence || detail.timestamp || ''}:${normalizeText(detail.historyMessage)}`;
       appendTerminalLine(
         detail.historyMessage,
         detail.historyTag || badgeText,
         detail.historyLevel || (status === 'error' ? 'error' : status === 'ok' ? 'ok' : status === 'wait' || status === 'next' ? 'warn' : 'running'),
-        historyKey
+        historyKey,
+        { update: detail.historyMode === 'update' && Boolean(explicitHistoryKey) }
       );
     }
   }
 
-  function trimTerminalMessage(message, maxLength = 105) {
+  function trimTerminalMessage(message, maxLength = 520) {
     const clean = normalizeText(message);
     if (clean.length <= maxLength) return clean;
     return `${clean.slice(0, maxLength - 1).trimEnd()}…`;
   }
 
-  function appendTerminalLine(message, tag = 'RUNNING', level = 'running', key = '') {
+  function appendTerminalLine(message, tag = 'RUNNING', level = 'running', key = '', options = {}) {
     const log = $('#systemTerminalLog');
     if (!log) return;
 
     const eventKey = key || `${level}:${tag}:${normalizeText(message)}`;
-    if (eventKey === dashboardState.lastStatusKey) return;
-    dashboardState.lastStatusKey = eventKey;
+    const cleanMessage = trimTerminalMessage(message);
+    const signature = `${eventKey}:${level}:${tag}:${cleanMessage}`;
+    if (!options.update && signature === dashboardState.lastStatusKey) return;
+    dashboardState.lastStatusKey = signature;
 
-    const line = document.createElement('div');
-    line.className = `terminal-line is-${level}`;
+    let line = null;
+    if (options.update) {
+      line = Array.from(log.children).find(item => item.dataset?.historyKey === eventKey) || null;
+    }
 
-    const prompt = document.createElement('span');
-    prompt.textContent = '>';
-    const content = document.createElement('em');
-    content.textContent = `[${getShortTime()}] ${trimTerminalMessage(message)}`;
-    const state = document.createElement('b');
-    state.textContent = `[${tag}]`;
+    if (!line) {
+      line = document.createElement('div');
+      line.dataset.historyKey = eventKey;
+      line.dataset.startedAt = getShortTime();
 
-    line.append(prompt, content, state);
-    log.appendChild(line);
+      const prompt = document.createElement('span');
+      prompt.textContent = '>';
+      const content = document.createElement('em');
+      const state = document.createElement('b');
+      line.append(prompt, content, state);
+      log.appendChild(line);
+    }
+
+    line.className = `terminal-line is-${level}${options.update ? ' is-live-entry' : ''}`;
+    const content = line.querySelector('em');
+    const state = line.querySelector('b');
+    if (content) content.textContent = `[${line.dataset.startedAt || getShortTime()}] ${cleanMessage}`;
+    if (state) state.textContent = `[${tag}]`;
+
     while (log.children.length > MAX_TERMINAL_LINES) log.firstElementChild?.remove();
+    log.scrollTop = log.scrollHeight;
   }
 
   function setProcessStage(stage) {
@@ -665,7 +681,8 @@
     if (!clean) return;
     const key = `${status.className}:${clean}`;
     const result = classifyBridgeStatus(clean, status);
-    if (Date.now() - dashboardState.lastStructuredProcessAt > 1200) {
+    const hasRecentStructuredProcess = Date.now() - dashboardState.lastStructuredProcessAt <= 1500;
+    if (!hasRecentStructuredProcess) {
       renderCurrentProcess({
         actionKey: `bridge-${result.stage}-${result.tag}-${result.text.replace(/\d+\s*giây/ig, 'countdown')}`,
         title: result.text,
@@ -674,8 +691,8 @@
         stage: result.stage,
         progress: result.progress
       });
+      if (!result.transient) appendTerminalLine(result.text, result.tag, result.level, key);
     }
-    if (!result.transient) appendTerminalLine(result.text, result.tag, result.level, key);
     setProcessStage(result.stage);
     setProgress(result.progress, result.resetProgress);
   }
@@ -811,10 +828,6 @@
       window.clearInterval(dashboardState.clockTimer);
       dashboardState.clockTimer = null;
     }
-    if (dashboardState.processTimer) {
-      window.clearInterval(dashboardState.processTimer);
-      dashboardState.processTimer = null;
-    }
     dashboardState.statusObserver?.disconnect();
     dashboardState.outputObserver?.disconnect();
     dashboardState.statusObserver = null;
@@ -832,8 +845,6 @@
 
     updateVietnamClock();
     dashboardState.clockTimer = window.setInterval(updateVietnamClock, 1000);
-    updateProcessElapsed();
-    dashboardState.processTimer = window.setInterval(updateProcessElapsed, 1000);
     wireSettingsModals();
     wireWorkspaceModal();
     wireTerminalObservers();

@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=20260720-v113-hacker">
   <link rel="manifest" href="./site.webmanifest?v=20260720-v113-hacker">
   <link rel="stylesheet" href="./incokit-workflow-v1.0.5.css?v=20260720-115-transparent-all-panels">
-  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260722-153-inline-account">
+  <link rel="stylesheet" href="./dashboard-v1.4.0.css?v=20260722-154-compact-workspaces">
 </head>
 <body>
   <canvas id="magnetic-grid" aria-hidden="true"></canvas>
@@ -112,13 +112,13 @@
   </footer>
 
   <div class="modal-overlay workspace-overlay" id="workspaceModal" role="dialog" aria-modal="true" aria-labelledby="workspaceModalTitle" aria-hidden="true">
-      <div class="modal workspace-modal">
-        <div class="workspace-modal-toolbar">
+      <div class="modal workspace-modal settings-modal-wide">
+        <div class="modal-heading settings-modal-heading workspace-modal-toolbar">
           <div class="workspace-modal-heading">
-            <span class="workspace-modal-icon" id="workspaceModalIcon" aria-hidden="true">▤</span>
+            <span class="summary-icon workspace-modal-icon" id="workspaceModalIcon" aria-hidden="true">▤</span>
             <div>
-              <span class="section-kicker">CỬA SỔ CHỨC NĂNG</span>
               <h2 id="workspaceModalTitle">Nguồn Bài</h2>
+              <p id="workspaceModalDescription">Nhập nhóm Facebook và chọn cách lấy link bài viết</p>
             </div>
           </div>
           <button class="workspace-close-btn" id="closeWorkspaceModalBtn" type="button" aria-label="Đóng cửa sổ" title="Đóng cửa sổ">×</button>
@@ -312,6 +312,10 @@
       </div>
     </section>
         </div>
+        <div class="modal-btns settings-modal-actions workspace-modal-actions">
+          <span class="workspace-modal-shortcut">Nhấn Esc để đóng cửa sổ</span>
+          <button class="btn btn-secondary" id="closeWorkspaceFooterBtn" type="button">Đóng Cửa Sổ</button>
+        </div>
       </div>
     </div>
 
@@ -492,6 +496,6 @@
   <script src="bridge-api.js?v=20260720-113"></script>
   <script src="apify-api.js?v=20260722-151-group-progress"></script>
   <script src="bridge-workflow.js?v=20260722-153-inline-account"></script>
-  <script src="dashboard-v1.4.0.js?v=20260722-153-inline-account"></script>
+  <script src="dashboard-v1.4.0.js?v=20260722-154-compact-workspaces"></script>
 </body>
 </html>

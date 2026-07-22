@@ -270,11 +270,31 @@
   }
 
   const WORKSPACE_DEFINITIONS = {
-    source: { title: 'Nguồn Bài', icon: '▤' },
-    queue: { title: 'Hàng Đợi', icon: '◎' },
-    composer: { title: 'Soạn Bình Luận & Kết Quả AI', icon: '✎' },
-    templates: { title: 'Kho Mẫu', icon: '◇' },
-    records: { title: 'Kết Quả', icon: '▥' }
+    source: {
+      title: 'Nguồn Bài',
+      icon: '▤',
+      description: 'Nhập nhóm Facebook và chọn cách lấy link bài viết'
+    },
+    queue: {
+      title: 'Hàng Đợi',
+      icon: '◎',
+      description: 'Kiểm tra danh sách link đang chờ hệ thống xử lý'
+    },
+    composer: {
+      title: 'Soạn Bình Luận',
+      icon: '✎',
+      description: 'Chuẩn bị nội dung, sản phẩm và tạo bình luận bằng AI'
+    },
+    templates: {
+      title: 'Kho Mẫu',
+      icon: '◇',
+      description: 'Quản lý mẫu sản phẩm dùng để điền dữ liệu nhanh'
+    },
+    records: {
+      title: 'Kết Quả',
+      icon: '▥',
+      description: 'Theo dõi link đã bình luận thành công và link đã loại bỏ'
+    }
   };
 
   function getWorkspaceTrigger(target) {
@@ -288,6 +308,7 @@
     const previousTrigger = dashboardState.activeWorkspaceTrigger;
     modal.classList.remove('show');
     modal.setAttribute('aria-hidden', 'true');
+    delete modal.dataset.workspace;
     $$('.workspace-panel.is-workspace-active').forEach(panel => panel.classList.remove('is-workspace-active'));
     $$('.workspace-trigger').forEach(trigger => {
       trigger.classList.remove('is-active');
@@ -305,6 +326,7 @@
     const modal = $('#workspaceModal');
     const title = $('#workspaceModalTitle');
     const icon = $('#workspaceModalIcon');
+    const description = $('#workspaceModalDescription');
     const closeButton = $('#closeWorkspaceModalBtn');
     const panels = $$(`.workspace-panel[data-workspace-panel="${target}"]`);
     if (!definition || !modal || !panels.length) return false;
@@ -323,6 +345,8 @@
 
     if (title) title.textContent = definition.title;
     if (icon) icon.textContent = definition.icon;
+    if (description) description.textContent = definition.description;
+    modal.dataset.workspace = target;
     modal.classList.add('show');
     modal.setAttribute('aria-hidden', 'false');
     dashboardState.activeWorkspace = target;
@@ -344,6 +368,7 @@
     });
 
     $('#closeWorkspaceModalBtn')?.addEventListener('click', () => closeWorkspace());
+    $('#closeWorkspaceFooterBtn')?.addEventListener('click', () => closeWorkspace());
     modal.addEventListener('click', event => {
       if (event.target === modal) closeWorkspace();
     });
